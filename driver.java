@@ -1,6 +1,9 @@
 import java.io.File;
 import java.util.ArrayList;
 import java.text.DecimalFormat;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 
 public class driver {	
 	public static void main (String[] args) {
@@ -61,21 +64,34 @@ public class driver {
 			}
 		}
 		
-		//print all input & calculations to screen
-		System.out.println("\nCache Simulator - CS 3853 - Group #05\n");
+		//print all to screen and output file
+		System.out.println("Cache Simulator - CS 3853 - Group #05\n");
 		printTraceFiles(fileList);
 		printInputParams(cacheSize, blockSize, assoc, physMem, memUsed, timeSlice, policy);
 		printCacheCalcs(cacheSize, blockSize, assoc, physMem, memUsed, timeSlice, policy);
 		printPhysicalMemoryCalcs(physMem, memUsed, fileList.size());
+		
+		try (PrintStream out = new PrintStream(new FileOutputStream("Team_05_Sim_n_M#1.txt"))){
+			System.setOut(out);
+			System.out.println("Cache Simulator - CS 3853 - Group #05\n");
+			printTraceFiles(fileList);
+			printInputParams(cacheSize, blockSize, assoc, physMem, memUsed, timeSlice, policy);
+			printCacheCalcs(cacheSize, blockSize, assoc, physMem, memUsed, timeSlice, policy);
+			printPhysicalMemoryCalcs(physMem, memUsed, fileList.size());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
+	
+	
 	
 	// prints the input parameters
 	public static void printInputParams(int cacheSize, int blockSize, int assoc, int physMem, int memUsed, int timeSlice, String policy){
 		DecimalFormat df = new DecimalFormat("0.0");
 		
 		System.out.println("***** Cache Input Parameters *****\n");
-		System.out.println("Cache size:                     " + cacheSize);
-		System.out.println("Block size:                     " + blockSize);
+		System.out.println("Cache size:                     " + cacheSize + " KB");
+		System.out.println("Block size:                     " + blockSize + " bytes");
 		System.out.println("Associativity:                  " + assoc);
 		System.out.println("Replacement Policy:             " + policy);
 		System.out.println("Physical Memory:                " + physMem);
@@ -126,20 +142,20 @@ public class driver {
 	}
 	
 	// prints physical memory calculations
-	public static void printPhysicalMemoryCalcs(int physMem, int memUsed, int numTraceFiles) {
+	public static void printPhysicalMemoryCalcs(long physMem, int memUsed, int numTraceFiles) {
         int pageSize = 4096; 
-        int numOfPhysPages = (physMem * 1024 * 1024) / pageSize;
-        int numOfPagesForSystem = (int) (numOfPhysPages * (memUsed / 100.0));
-		int sizeOfPageTableEntry = 0;
+        long numOfPhysPages = (physMem * 1024 * 1024) / pageSize;
+        long numOfPagesForSystem = (long) (numOfPhysPages * (memUsed / 100.0));
+		long sizeOfPageTableEntry = 0;
 		try{
-			sizeOfPageTableEntry = (int) CalculateLogBase2(numOfPhysPages) + 1; //bits needed for number of physical pages + 1 valid bit
+			sizeOfPageTableEntry = CalculateLogBase2(numOfPhysPages) + 1; //bits needed for number of physical pages + 1 valid bit
 		} catch(Exception e)
 			{
 				System.out.println("Error in Size of Page Table Calculation");
 				System.exit(-1);
 			}
         int numEntries = 512 * 1024; //all trace file addresses < 0x7FFFFFFF, so 512KB hard limit
-        int totalRAMForPageTables = (numEntries * sizeOfPageTableEntry * numTraceFiles) / 8;
+        long totalRAMForPageTables = (numEntries * sizeOfPageTableEntry * numTraceFiles) / 8;
 
         System.out.println("\n***** Physical Memory Calculated Values *****");
         System.out.println("");
@@ -155,6 +171,11 @@ public class driver {
 	public static int CalculateLogBase2(int arg){
         int base = 2;
         return (int) (Math.log(arg) / Math.log(base));
+    }
+	
+	public static long CalculateLogBase2(long arg){
+		long base = 2;
+		return (long) (Math.log(arg) / Math.log(base));
     }
 
     public static int CalculateNumOfIndices(int cacheSize, int blockSize, int assoc){
