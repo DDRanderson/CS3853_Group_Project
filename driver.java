@@ -61,6 +61,7 @@ public class driver {
 			}
 		}
 		
+		//print all input & calculations to screen
 		System.out.println("\nCache Simulator - CS 3853 - Group #05\n");
 		printTraceFiles(fileList);
 		printInputParams(cacheSize, blockSize, assoc, physMem, memUsed, timeSlice, policy);
@@ -129,8 +130,15 @@ public class driver {
         int pageSize = 4096; 
         int numOfPhysPages = (physMem * 1024 * 1024) / pageSize;
         int numOfPagesForSystem = (int) (numOfPhysPages * (memUsed / 100.0));
-        int sizeOfPageTableEntry = 19;
-        int numEntries = 512 * 1024;
+		int sizeOfPageTableEntry = 0;
+		try{
+			sizeOfPageTableEntry = (int) CalculateLogBase2(numOfPhysPages) + 1; //bits needed for number of physical pages + 1 valid bit
+		} catch(Exception e)
+			{
+				System.out.println("Error in Size of Page Table Calculation");
+				System.exit(-1);
+			}
+        int numEntries = 512 * 1024; //all trace file addresses < 0x7FFFFFFF, so 512KB hard limit
         int totalRAMForPageTables = (numEntries * sizeOfPageTableEntry * numTraceFiles) / 8;
 
         System.out.println("\n***** Physical Memory Calculated Values *****");

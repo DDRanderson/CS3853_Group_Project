@@ -9,5 +9,5 @@ pass arguments on the command line with -[option]
 	example:
 		java test -s 8
 		
-copy paste this to command line to test:
+copy paste this to command line to test#1:
 	-s 512 -b 16 -a 4 -r rr -p 1024 -n 100 –u 75 -f Trace1.trc -f Trace2_4Evaluation.trc –f Corruption.trc
