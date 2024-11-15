@@ -172,7 +172,9 @@ public class driver {
 								String eipAddress = sbEipAddress.toString();
 								//TODO: send the eip address for cache hit/miss check
 								totalAddressesRead++;
-								System.out.println("Tag Bits: " + parseTagBitsToInt(toBinaryString(eipAddress), tagBits));
+								System.out.println("Tag: " + parseTagBitsToInt(toBinaryString(eipAddress), tagBits));
+								System.out.println("Index: " + parseIndexBitsToInt(toBinaryString(eipAddress), tagBits, indexBits));
+								System.out.println("Block Offset: " + parseBlockBitsToInt(toBinaryString(eipAddress), tagBits, indexBits, blockOffset));
 								break;
 							
 							//process both dst[6-13][15-22] and src[33-40][42-49] addresses
@@ -190,6 +192,7 @@ public class driver {
 									//TODO: send dst address for cache hit/miss check
 									sumDstSrcBytes += 4;
 									totalAddressesRead++;
+
 								}
 
 								//srcM:
@@ -205,6 +208,7 @@ public class driver {
 									//TODO: send src address for cache hit/miss check
 									sumDstSrcBytes += 4;
 									totalAddressesRead++;
+									
 								}
 
 							default:
@@ -374,9 +378,9 @@ public class driver {
 	public static int parseTagBitsToInt(String str, int tagBits){
 		char[] charArray = new char[100];
 		charArray = str.toCharArray();
-		//tag [0 -> (tag bits-1)]
 		String strTag = null;
 		StringBuilder sbTag = new StringBuilder();
+		//tag [0 -> (tag bits-1)]
 		for (int j = 0; j <= (tagBits - 1); j++)
 		{
 			sbTag.append(charArray[j]);
@@ -385,5 +389,39 @@ public class driver {
 		int iTag = Integer.parseInt(strTag, 2);	//binary string to int
 		return iTag;
 	}
+
+	//parse index bits from 32-bit binary address string, return as int
+	public static int parseIndexBitsToInt(String str, int tagBits, int indexBits){
+		char[] charArray = new char[100];
+		charArray = str.toCharArray();
+		String strIndex = null;
+		StringBuilder sbIndex = new StringBuilder();
+		//index [tag bits -> (tag bits + index bits) - 1 ]
+		for (int j = tagBits; j <= (tagBits + indexBits - 1); j++)
+		{
+			sbIndex.append(charArray[j]);
+		}
+		strIndex = sbIndex.toString();
+		int iIndex = Integer.parseInt(strIndex, 2);	//binary string to int
+		return iIndex;
+	}
+
+	//parse block offset bits from 32-bit binary address string, return as int
+	public static int parseBlockBitsToInt(String str, int tagBits, int indexBits, int blockOffset){
+		char[] charArray = new char[100];
+		charArray = str.toCharArray();
+		String strBlock = null;
+		StringBuilder sbBlock = new StringBuilder();
+		//block [(tag bits + index bits) -> (tag bits + index bits + block bits)-1
+		for (int j = 28; j <= 31; j++)
+		{
+			sbBlock.append(charArray[j]);
+		}
+		strBlock = sbBlock.toString();
+		int iBlock = Integer.parseInt(strBlock, 2);	//binary string to int
+		return iBlock;
+	}
+
+	
 
 }	
