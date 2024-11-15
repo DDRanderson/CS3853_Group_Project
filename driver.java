@@ -26,6 +26,7 @@ public class driver {
 		String policy = new String();
         ArrayList<File> fileList = new ArrayList<>();
 		ArrayList<Tracefile> traceFileList = new ArrayList<>();
+
 		
         // stores arguments into respective variables
 		for (int i = 0; i < args.length; i++) {
@@ -101,6 +102,14 @@ public class driver {
 		//       BEGIN MILESTONE #2		//
 		//////////////////////////////////
 		
+		//global variables needed to Milestone#2
+		int addressSpace = 32;
+		int blockOffset = CalculateLogBase2(blockSize);		//the number of bits for the block offset
+		cacheSize *= 1024;
+		int numOfIndices = CalculateNumOfIndices(cacheSize, blockSize, assoc);
+		int tagBits = CalculateTagBits(addressSpace,blockOffset,CalculateLogBase2(numOfIndices));	//number of tag bits
+		int indexBits = CalculateLogBase2(numOfIndices);		//number of index bits
+
 		//setup the cache
 		//each block set to -1 to indicate valid is not set/no tag written
 		int[][] arrCache = new int[CalculateNumOfSets(cacheSize,blockSize,assoc)][assoc];
@@ -163,6 +172,7 @@ public class driver {
 								String eipAddress = sbEipAddress.toString();
 								//TODO: send the eip address for cache hit/miss check
 								totalAddressesRead++;
+								System.out.println("Tag Bits: " + parseTagBitsToInt(toBinaryString(eipAddress), tagBits));
 								break;
 							
 							//process both dst[6-13][15-22] and src[33-40][42-49] addresses
@@ -352,4 +362,28 @@ public class driver {
 				+ 	"Done Status " + Boolean.toString(isDoneReading);
 		}
 	}
+
+	//convert 32-bit hex address string to binary string
+	public static String toBinaryString(String str){
+		long lHex = Long.parseLong(str, 16);
+		String bHex = String.format("%32s", Long.toBinaryString(lHex)).replace(' ', '0');
+		return bHex;
+	}
+
+	//parse tag bits from 32-bit binary address string, return as int
+	public static int parseTagBitsToInt(String str, int tagBits){
+		char[] charArray = new char[100];
+		charArray = str.toCharArray();
+		//tag [0 -> (tag bits-1)]
+		String strTag = null;
+		StringBuilder sbTag = new StringBuilder();
+		for (int j = 0; j <= (tagBits - 1); j++)
+		{
+			sbTag.append(charArray[j]);
+		}
+		strTag = sbTag.toString();
+		int iTag = Integer.parseInt(strTag, 2);	//binary string to int
+		return iTag;
+	}
+
 }	
