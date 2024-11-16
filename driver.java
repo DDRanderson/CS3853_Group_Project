@@ -125,7 +125,7 @@ public class driver {
 		//process each trace file, save info to variables and cache
 		int totalAddressesRead = 0;			//+1 EIP address & +1src & +1dst (if src/dst read occurred) 
 		int sumInstructionBytes = 0;		//sum of all the numbers in (_) after EIP
-		int sumDstSrcBytes = 0;			//if src/dst read occurred, add 4 for either one where read occurred
+		int sumDstSrcBytes = 0;				//if src/dst read occurred, add 4 for either one where read occurred
 
 		int doneCount = 0;
 		for (int i = 0; doneCount < traceFileList.size(); i++){
@@ -146,7 +146,6 @@ public class driver {
 				String line = null;
 				char[] charArray = new char[100];
 
-				
 				//reads every line in the file
 				//TODO: need to adjust for TimeSlice, use each trace file objects currReadPos, see Andrew for algorithm
 				while (!currentFile.isDoneReading)
@@ -180,28 +179,31 @@ public class driver {
 								int eipIndex = parseIndexBitsToInt(toBinaryString(eipAddress), tagBits, indexBits);
 								int eipBlock =  parseBlockBitsToInt(toBinaryString(eipAddress), tagBits, indexBits, blockOffset);
 								int addBlock = addBlockRows(eipBlock, Integer.parseInt(eipNum), blockSize);
-								for (int k = eipIndex; k < (eipIndex + addBlock + 1); k++){
-									//checks for hit/matching tag
-									if (arrCache[k][0] == eipTag){
-										sumCacheHits++;
-										continue;
+								for (int row = eipIndex; row < (eipIndex + addBlock + 1); row++){
+									for (int col = 0; col < assoc; col++){
+										//checks for hit/matching tag
+										if (arrCache[row][col] == eipTag){
+											sumCacheHits++;
+											break;
+										}
+										//checks for compulsory miss 
+										else if (arrCache[row][col] < 0){
+											arrCache[row][col] = eipTag;
+											sumCompulsoryMisses++;
+											break;
+										}
+										//checks for conflict miss
+										//TODO: add functionality for using Replacement Policy algorithm if all cols have conflicts
+										else if (arrCache[row][col] != eipTag){
+											//arrCache[row][col] = eipTag;
+											sumConflictMisses++;
+											continue;
+										} else {
+											System.out.println("Error in EIP cache check");
+											System.exit(0);
+										}
 									}
-									//checks for compulsory miss 
-									else if (arrCache[k][0] < 0){
-										arrCache[k][0] = eipTag;
-										sumCompulsoryMisses++;
-										continue;
-									}
-									//checks for conflict miss
-									//TODO: add functionality for checking other associative columns and use Replacement Policy algorithm
-									else if (arrCache[k][0] != eipTag){
-										arrCache[k][0] = eipTag;
-										sumConflictMisses++;
-										continue;
-									} else {
-										System.out.println("Error in EIP cache check");
-										System.exit(0);
-									}
+
 								}
 								break;
 							
