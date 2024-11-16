@@ -109,6 +109,9 @@ public class driver {
 		int numOfIndices = CalculateNumOfIndices(cacheSize, blockSize, assoc);
 		int tagBits = CalculateTagBits(addressSpace,blockOffset,CalculateLogBase2(numOfIndices));	//number of tag bits
 		int indexBits = CalculateLogBase2(numOfIndices);		//number of index bits
+		int sumCacheHits = 0;
+		int sumCompulsoryMisses = 0;
+		int sumConflictMisses = 0;
 
 		//setup the cache
 		//each block set to -1 to indicate valid is not set/no tag written
@@ -145,7 +148,7 @@ public class driver {
 
 				
 				//reads every line in the file
-				//TODO: need to adjust for TimeSlice
+				//TODO: need to adjust for TimeSlice, use each trace file objects currReadPos, see Andrew for algorithm
 				while (!currentFile.isDoneReading)
 				{
 					line = br.readLine();
@@ -162,6 +165,7 @@ public class driver {
 						{
 							//process the instruction address, hex address is [10-17]
 							case 'E':
+								totalAddressesRead++;
 								String eipNum = new StringBuilder().append(charArray[5]).append(charArray[6]).toString();
 								sumInstructionBytes += Integer.parseInt(eipNum);
 								StringBuilder sbEipAddress = new StringBuilder();
@@ -170,14 +174,39 @@ public class driver {
 									sbEipAddress.append(charArray[j]);
 								}
 								String eipAddress = sbEipAddress.toString();
-								//TODO: send the eip address for cache hit/miss check
-								totalAddressesRead++;
-								System.out.println("Tag: " + parseTagBitsToInt(toBinaryString(eipAddress), tagBits));
-								System.out.println("Index: " + parseIndexBitsToInt(toBinaryString(eipAddress), tagBits, indexBits));
-								System.out.println("Block Offset: " + parseBlockBitsToInt(toBinaryString(eipAddress), tagBits, indexBits, blockOffset));
+
+								//perform the cache check and update cache if necessary
+								int eipTag = parseTagBitsToInt(toBinaryString(eipAddress), tagBits);
+								int eipIndex = parseIndexBitsToInt(toBinaryString(eipAddress), tagBits, indexBits);
+								int eipBlock =  parseBlockBitsToInt(toBinaryString(eipAddress), tagBits, indexBits, blockOffset);
+								int addBlock = addBlockRows(eipBlock, Integer.parseInt(eipNum), blockSize);
+								for (int k = eipIndex; k < (eipIndex + addBlock + 1); k++){
+									//checks for hit/matching tag
+									if (arrCache[k][0] == eipTag){
+										sumCacheHits++;
+										continue;
+									}
+									//checks for compulsory miss 
+									else if (arrCache[k][0] < 0){
+										arrCache[k][0] = eipTag;
+										sumCompulsoryMisses++;
+										continue;
+									}
+									//checks for conflict miss
+									//TODO: add functionality for checking other associative columns and use Replacement Policy algorithm
+									else if (arrCache[k][0] != eipTag){
+										arrCache[k][0] = eipTag;
+										sumConflictMisses++;
+										continue;
+									} else {
+										System.out.println("Error in EIP cache check");
+										System.exit(0);
+									}
+								}
 								break;
 							
 							//process both dst[6-13][15-22] and src[33-40][42-49] addresses
+							//always 4 bytes read if non-zero address for both dst and src
 							case 'd':
 								//dstM:
 								String dstAddress = null;
@@ -221,11 +250,15 @@ public class driver {
 				e.printStackTrace();
 			}
 		}
-		//print cache results
+		//print cache simulation results
 		System.out.println("\n*****CACHE SIMULATION RESULTS*****\n");
-		System.out.println("Total Cache Accesses: \t" + "------" + "\t(" + totalAddressesRead + " addresses)");
+		System.out.println("Total Cache Accesses: \t" + (sumCacheHits + sumCompulsoryMisses + sumConflictMisses) + "\t(" + totalAddressesRead + " addresses)");
 		System.out.print("Instruction Bytes: \t" + sumInstructionBytes);
 		System.out.println("\tSrcDst Bytes: " + sumDstSrcBytes);
+		System.out.println("Cache Hits: \t\t" + sumCacheHits);
+		System.out.println("Cache Misses: \t\t" + (sumCompulsoryMisses + sumConflictMisses));
+		System.out.println("--- Compulsory Misses: \t" + sumCompulsoryMisses);
+		System.out.println("--- Conflict Misses: \t" + sumConflictMisses);
 	}
 	
 	
@@ -422,6 +455,9 @@ public class driver {
 		return iBlock;
 	}
 
-	
+	//calculate how many additional blocks into the cache we need to access
+	public static int addBlockRows(int block, int bytesToRead, int blockSize){
+		return (int) Math.floor( (block + bytesToRead - 1) / blockSize );
+	}
 
 }	
