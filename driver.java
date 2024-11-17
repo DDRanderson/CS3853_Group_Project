@@ -176,17 +176,17 @@ public class driver {
 								}
 								String eipAddress = sbEipAddress.toString();
 
-								//perform the cache check and update cache if necessary
+								//perform eip cache check and update cache if necessary
 								int eipTag = parseTagBitsToInt(toBinaryString(eipAddress), tagBits);
 								int eipIndex = parseIndexBitsToInt(toBinaryString(eipAddress), tagBits, indexBits);
 								int eipBlock =  parseBlockBitsToInt(toBinaryString(eipAddress), tagBits, indexBits, blockOffset);
-								int addBlock = addBlockRows(eipBlock, Integer.parseInt(eipNum), blockSize);
-								for (int row = eipIndex; row < (eipIndex + addBlock + 1); row++){
+								int eipAddBlock = addBlockRows(eipBlock, Integer.parseInt(eipNum), blockSize);
+								for (int row = eipIndex; row < (eipIndex + eipAddBlock + 1); row++){
 									int conflictCheckCount = 0;
 									for (int col = 0; col < assoc; col++){
 									//arrCache[row][col] = eipTag;
 									//every col is checked before deciding if hit/miss
-									//TODO: add functionality for using Replacement Policy algorithm if all cols have conflicts
+									//TODO: add Round Robin Replacement Policy algorithm if all cols have conflicts
 
 										//checks for hit/matching tag
 										if (arrCache[row][col] == eipTag){
@@ -239,10 +239,56 @@ public class driver {
 								dstAddress = sbDst.toString();
 								if (!dstAddress.equals("00000000"))
 								{
-									//TODO: send dst address for cache hit/miss check
 									sumDstSrcBytes += 4;
 									totalAddressesRead++;
-
+									//send dst address for cache hit/miss check
+									int dstTag = parseTagBitsToInt(toBinaryString(dstAddress), tagBits);
+									int dstIndex = parseIndexBitsToInt(toBinaryString(dstAddress), tagBits, indexBits);
+									int dstBlock =  parseBlockBitsToInt(toBinaryString(dstAddress), tagBits, indexBits, blockOffset);
+									int dstAddBlock = addBlockRows(dstBlock, 4, blockSize);
+									for (int row = dstIndex; row < (dstIndex + dstAddBlock + 1); row++){
+										int conflictCheckCount = 0;
+										for (int col = 0; col < assoc; col++){
+										//arrCache[row][col] = eipTag;
+										//every col is checked before deciding if hit/miss
+										//TODO: add Round Robin Replacement Policy algorithm if all cols have conflicts
+	
+											//checks for hit/matching tag
+											if (arrCache[row][col] == dstTag){
+												sumCacheHits++;
+												break;
+											}
+											//checks for compulsory miss 
+											else if (arrCache[row][col] < 0){
+												arrCache[row][col] = dstTag;
+												sumCompulsoryMisses++;
+												break;
+											}
+											//checks for conflict miss
+											else if (arrCache[row][col] != dstTag){
+												conflictCheckCount++;
+												if (conflictCheckCount == assoc){
+													sumConflictMisses++;
+													//run replacement policy algorithm
+													if (policy.equals("Random")){
+														Random rand = new Random();
+														//random number between [0 - (associativity-1)]
+														int n = rand.nextInt(assoc);
+														arrCache[row][n] = dstTag;
+													} else {
+														//TODO: round robin
+														
+													}
+													break;
+												}
+												continue;
+											} else {
+												System.out.println("Error in dstM cache check");
+												System.exit(0);
+											}
+										}
+	
+									}
 								}
 
 								//srcM:
@@ -255,10 +301,56 @@ public class driver {
 								srcAddress = sbSrc.toString();
 								if (!srcAddress.equals("00000000"))
 								{
-									//TODO: send src address for cache hit/miss check
 									sumDstSrcBytes += 4;
 									totalAddressesRead++;
-									
+									//TODO: send src address for cache hit/miss check
+									int srcTag = parseTagBitsToInt(toBinaryString(srcAddress), tagBits);
+									int srcIndex = parseIndexBitsToInt(toBinaryString(srcAddress), tagBits, indexBits);
+									int srcBlock =  parseBlockBitsToInt(toBinaryString(srcAddress), tagBits, indexBits, blockOffset);
+									int srcAddBlock = addBlockRows(srcBlock, 4, blockSize);
+									for (int row = srcIndex; row < (srcIndex + srcAddBlock + 1); row++){
+										int conflictCheckCount = 0;
+										for (int col = 0; col < assoc; col++){
+										//arrCache[row][col] = eipTag;
+										//every col is checked before deciding if hit/miss
+										//TODO: add Round Robin Replacement Policy algorithm if all cols have conflicts
+	
+											//checks for hit/matching tag
+											if (arrCache[row][col] == srcTag){
+												sumCacheHits++;
+												break;
+											}
+											//checks for compulsory miss 
+											else if (arrCache[row][col] < 0){
+												arrCache[row][col] = srcTag;
+												sumCompulsoryMisses++;
+												break;
+											}
+											//checks for conflict miss
+											else if (arrCache[row][col] != srcTag){
+												conflictCheckCount++;
+												if (conflictCheckCount == assoc){
+													sumConflictMisses++;
+													//run replacement policy algorithm
+													if (policy.equals("Random")){
+														Random rand = new Random();
+														//random number between [0 - (associativity-1)]
+														int n = rand.nextInt(assoc);
+														arrCache[row][n] = srcTag;
+													} else {
+														//TODO: round robin
+														
+													}
+													break;
+												}
+												continue;
+											} else {
+												System.out.println("Error in dstM cache check");
+												System.exit(0);
+											}
+										}
+	
+									}
 								}
 
 							default:
