@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Random;
 import java.text.DecimalFormat;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -152,6 +153,7 @@ public class driver {
 				{
 					line = br.readLine();
 					if (line == null){
+						//TODO: does the original tracefile get updated?
 						currentFile.isDoneReading = true;
 						doneCount++;
 						break;
@@ -180,7 +182,12 @@ public class driver {
 								int eipBlock =  parseBlockBitsToInt(toBinaryString(eipAddress), tagBits, indexBits, blockOffset);
 								int addBlock = addBlockRows(eipBlock, Integer.parseInt(eipNum), blockSize);
 								for (int row = eipIndex; row < (eipIndex + addBlock + 1); row++){
+									int conflictCheckCount = 0;
 									for (int col = 0; col < assoc; col++){
+									//arrCache[row][col] = eipTag;
+									//every col is checked before deciding if hit/miss
+									//TODO: add functionality for using Replacement Policy algorithm if all cols have conflicts
+
 										//checks for hit/matching tag
 										if (arrCache[row][col] == eipTag){
 											sumCacheHits++;
@@ -193,10 +200,22 @@ public class driver {
 											break;
 										}
 										//checks for conflict miss
-										//TODO: add functionality for using Replacement Policy algorithm if all cols have conflicts
 										else if (arrCache[row][col] != eipTag){
-											//arrCache[row][col] = eipTag;
-											sumConflictMisses++;
+											conflictCheckCount++;
+											if (conflictCheckCount == assoc){
+												sumConflictMisses++;
+												//run replacement policy algorithm
+												if (policy.equals("Random")){
+													Random rand = new Random();
+													//random number between [0 - (associativity-1)]
+													int n = rand.nextInt(assoc);
+													arrCache[row][n] = eipTag;
+												} else {
+													//TODO: round robin
+													
+												}
+												break;
+											}
 											continue;
 										} else {
 											System.out.println("Error in EIP cache check");
