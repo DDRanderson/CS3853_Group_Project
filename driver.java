@@ -103,11 +103,12 @@ public class driver {
 		//       BEGIN MILESTONE #2		//
 		//////////////////////////////////
 		
-		//global variables needed to Milestone#2
+		//global variables needed for Milestone#2
 		int addressSpace = 32;
 		int blockOffset = CalculateLogBase2(blockSize);		//the number of bits for the block offset
 		cacheSize *= 1024;
 		int numOfIndices = CalculateNumOfIndices(cacheSize, blockSize, assoc);
+		int numOfSets = CalculateNumOfSets(cacheSize,blockSize,assoc);
 		int tagBits = CalculateTagBits(addressSpace,blockOffset,CalculateLogBase2(numOfIndices));	//number of tag bits
 		int indexBits = CalculateLogBase2(numOfIndices);		//number of index bits
 		int sumCacheHits = 0;
@@ -122,6 +123,10 @@ public class driver {
 					arrCache[row][col] = -1;
 				}
 			}
+
+		//keeps track of rows in the cache
+		//this is used exclusively for the Round Robin replacement algorithm
+		int[] replacementIndex = new int[numOfSets];
 		
 		//process each trace file, save info to variables and cache
 		int totalAddressesRead = 0;			//+1 EIP address & +1src & +1dst (if src/dst read occurred) 
@@ -186,7 +191,6 @@ public class driver {
 									for (int col = 0; col < assoc; col++){
 									//arrCache[row][col] = eipTag;
 									//every col is checked before deciding if hit/miss
-									//TODO: add Round Robin Replacement Policy algorithm if all cols have conflicts
 
 										//checks for hit/matching tag
 										if (arrCache[row][col] == eipTag){
@@ -211,8 +215,10 @@ public class driver {
 													int n = rand.nextInt(assoc);
 													arrCache[row][n] = eipTag;
 												} else {
-													//TODO: round robin
-													
+													//Round Robin
+													int replaceCol = replacementIndex[row];
+													arrCache[row][replaceCol] = eipTag;
+													replacementIndex[row] = (replaceCol + 1) % assoc; //update replacement index
 												}
 												break;
 											}
@@ -226,6 +232,9 @@ public class driver {
 								}
 								break;
 							
+
+
+
 							//process both dst[6-13][15-22] and src[33-40][42-49] addresses
 							//always 4 bytes read if non-zero address for both dst and src
 							case 'd':
@@ -276,8 +285,10 @@ public class driver {
 														int n = rand.nextInt(assoc);
 														arrCache[row][n] = dstTag;
 													} else {
-														//TODO: round robin
-														
+														//Round Robin
+														int replaceCol = replacementIndex[row];
+														arrCache[row][replaceCol] = dstTag;
+														replacementIndex[row] = (replaceCol + 1) % assoc; //update replacement index
 													}
 													break;
 												}
@@ -290,6 +301,9 @@ public class driver {
 	
 									}
 								}
+
+
+
 
 								//srcM:
 								String srcAddress = null;
@@ -338,7 +352,10 @@ public class driver {
 														int n = rand.nextInt(assoc);
 														arrCache[row][n] = srcTag;
 													} else {
-														//TODO: round robin
+														//Round Robin
+														int replaceCol = replacementIndex[row];
+														arrCache[row][replaceCol] = srcTag;
+														replacementIndex[row] = (replaceCol + 1) % assoc; //update replacement index
 														
 													}
 													break;
