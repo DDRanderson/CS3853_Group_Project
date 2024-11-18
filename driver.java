@@ -102,7 +102,7 @@ public class driver {
 		//////////////////////////////////
 		//       BEGIN MILESTONE #2		//
 		//////////////////////////////////
-		
+		int test = 0;
 		//global variables needed for Milestone#2
 		int addressSpace = 32;
 		int blockOffset = CalculateLogBase2(blockSize);		//the number of bits for the block offset
@@ -114,6 +114,7 @@ public class driver {
 		int sumCacheHits = 0;
 		int sumCompulsoryMisses = 0;
 		int sumConflictMisses = 0;
+		int timeSliceLinesToRead = timeSlice * 3;
 
 		//setup the cache
 		//each block set to -1 to indicate valid is not set/no tag written
@@ -135,12 +136,17 @@ public class driver {
 
 		int doneCount = 0;
 		for (int i = 0; doneCount < traceFileList.size(); i++){
-			Tracefile currentFile = traceFileList.get(i);
-
 			//loop back to beginning of trace files array
 			if(i == traceFileList.size()) {
 				i = 0;
 			}
+
+			Tracefile currentFile = traceFileList.get(i);
+
+			//set the start reading position to the file read position
+			int currentLineReadPos = 1;
+			int startLineReadPos = currentFile.fileLineReadPos;
+			int finalLineReadPos = (timeSliceLinesToRead + startLineReadPos);
 
 			if(currentFile.isDoneReading) {
 				continue;
@@ -152,17 +158,33 @@ public class driver {
 				String line = null;
 				char[] charArray = new char[100];
 
-				//reads every line in the file
+				//reads lines in the file
 				//TODO: need to adjust for TimeSlice, use each trace file objects currReadPos, see Andrew for algorithm
 				while (!currentFile.isDoneReading)
 				{
 					line = br.readLine();
+
+					//Skip lines until we reach the start line
+					if (currentLineReadPos < startLineReadPos){
+						currentLineReadPos++;
+						continue;
+					}
+
+					//Break out if we hit the final line to read
+					if (currentLineReadPos == finalLineReadPos){
+						currentFile.fileLineReadPos = currentLineReadPos;
+						break;
+					}
+
 					if (line == null){
 						//TODO: does the original tracefile get updated?
 						currentFile.isDoneReading = true;
 						doneCount++;
 						break;
 					}
+
+					currentLineReadPos++;
+
 					//convert line to a char array
 					charArray = line.toCharArray();
 					if(charArray.length != 0)
@@ -171,8 +193,12 @@ public class driver {
 						{
 							//process the instruction address, hex address is [10-17]
 							case 'E':
+								System.out.println("Test = " + test);
+								test++;
+
 								totalAddressesRead++;
 								String eipNum = new StringBuilder().append(charArray[5]).append(charArray[6]).toString();
+									if (Integer.parseInt(eipNum) == 0) continue;	//check for eip not reading any bytes
 								sumInstructionBytes += Integer.parseInt(eipNum);
 								StringBuilder sbEipAddress = new StringBuilder();
 								for (int j = 10; j <= 17; j++)
@@ -248,7 +274,7 @@ public class driver {
 									sbDst.append(charArray[j]);
 								}
 								dstAddress = sbDst.toString();
-								if (!dstAddress.equals("00000000"))
+								if (!dstAddress.equals("00000000") || charArray[15] != '-')	//check if dst is actually not reading bytes
 								{
 									sumDstSrcBytes += 4;
 									totalAddressesRead++;
@@ -316,7 +342,7 @@ public class driver {
 									sbSrc.append(charArray[j]);
 								}
 								srcAddress = sbSrc.toString();
-								if (!srcAddress.equals("00000000"))
+								if (!srcAddress.equals("00000000") || charArray[42] != '-')	//check if src is actually not reading bytes
 								{
 									sumDstSrcBytes += 4;
 									totalAddressesRead++;
@@ -510,12 +536,12 @@ public class driver {
 	public static class Tracefile{
 		public File filePath = null;
 		public String name = null;
-		public int currReadPos;
+		public int fileLineReadPos;
 		public boolean isDoneReading;
 		
 		public Tracefile(File filePath){
 			this.filePath = filePath;
-			currReadPos = 0;
+			fileLineReadPos = 1;
 			isDoneReading = false;
 		}
 
@@ -529,7 +555,7 @@ public class driver {
 		public String toString() {
 			return 	"Filepath " + filePath.getName()
 				+	"Name " + name
-				+	"currReadPos " + currReadPos
+				+	"fileLineReadPos " + fileLineReadPos
 				+ 	"Done Status " + Boolean.toString(isDoneReading);
 		}
 	}
