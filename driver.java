@@ -187,8 +187,10 @@ public class driver {
 								int eipBlock =  parseBlockBitsToInt(toBinaryString(eipAddress), tagBits, indexBits, blockOffset);
 								int eipAddBlock = addBlockRows(eipBlock, Integer.parseInt(eipNum), blockSize);
 								for (int row = eipIndex; row < (eipIndex + eipAddBlock + 1); row++){
+									if (row >= arrCache.length) break; //OOB check
 									int conflictCheckCount = 0;
 									for (int col = 0; col < assoc; col++){
+										if (col >= arrCache[row].length) break; //OOB check
 									//arrCache[row][col] = eipTag;
 									//every col is checked before deciding if hit/miss
 
@@ -250,17 +252,18 @@ public class driver {
 								{
 									sumDstSrcBytes += 4;
 									totalAddressesRead++;
-									//send dst address for cache hit/miss check
+									//dst cache check
 									int dstTag = parseTagBitsToInt(toBinaryString(dstAddress), tagBits);
 									int dstIndex = parseIndexBitsToInt(toBinaryString(dstAddress), tagBits, indexBits);
 									int dstBlock =  parseBlockBitsToInt(toBinaryString(dstAddress), tagBits, indexBits, blockOffset);
 									int dstAddBlock = addBlockRows(dstBlock, 4, blockSize);
 									for (int row = dstIndex; row < (dstIndex + dstAddBlock + 1); row++){
+										if (row >= arrCache.length) break; //OOB check
 										int conflictCheckCount = 0;
 										for (int col = 0; col < assoc; col++){
+											if (col >= arrCache[row].length) break; //OOB check
 										//arrCache[row][col] = eipTag;
 										//every col is checked before deciding if hit/miss
-										//TODO: add Round Robin Replacement Policy algorithm if all cols have conflicts
 	
 											//checks for hit/matching tag
 											if (arrCache[row][col] == dstTag){
@@ -317,17 +320,18 @@ public class driver {
 								{
 									sumDstSrcBytes += 4;
 									totalAddressesRead++;
-									//TODO: send src address for cache hit/miss check
+									//src cache check
 									int srcTag = parseTagBitsToInt(toBinaryString(srcAddress), tagBits);
 									int srcIndex = parseIndexBitsToInt(toBinaryString(srcAddress), tagBits, indexBits);
 									int srcBlock =  parseBlockBitsToInt(toBinaryString(srcAddress), tagBits, indexBits, blockOffset);
 									int srcAddBlock = addBlockRows(srcBlock, 4, blockSize);
 									for (int row = srcIndex; row < (srcIndex + srcAddBlock + 1); row++){
+										if (row >= arrCache.length) break; //OOB check
 										int conflictCheckCount = 0;
 										for (int col = 0; col < assoc; col++){
+											if (col >= arrCache[row].length) break; //OOB check
 										//arrCache[row][col] = eipTag;
 										//every col is checked before deciding if hit/miss
-										//TODO: add Round Robin Replacement Policy algorithm if all cols have conflicts
 	
 											//checks for hit/matching tag
 											if (arrCache[row][col] == srcTag){
