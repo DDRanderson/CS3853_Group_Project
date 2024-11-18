@@ -159,7 +159,6 @@ public class driver {
 				char[] charArray = new char[100];
 
 				//reads lines in the file
-				//TODO: need to adjust for TimeSlice, use each trace file objects currReadPos, see Andrew for algorithm
 				while (!currentFile.isDoneReading)
 				{
 					line = br.readLine();
@@ -171,13 +170,12 @@ public class driver {
 					}
 
 					//Break out if we hit the final line to read
-					if (currentLineReadPos == finalLineReadPos){
+					if (currentLineReadPos == finalLineReadPos && traceFileList.size() != 1){
 						currentFile.fileLineReadPos = currentLineReadPos;
 						break;
 					}
 
 					if (line == null){
-						//TODO: does the original tracefile get updated?
 						currentFile.isDoneReading = true;
 						doneCount++;
 						break;
@@ -193,12 +191,10 @@ public class driver {
 						{
 							//process the instruction address, hex address is [10-17]
 							case 'E':
-								System.out.println("Test = " + test);
-								test++;
 
-								totalAddressesRead++;
 								String eipNum = new StringBuilder().append(charArray[5]).append(charArray[6]).toString();
 									if (Integer.parseInt(eipNum) == 0) continue;	//check for eip not reading any bytes
+								totalAddressesRead++;
 								sumInstructionBytes += Integer.parseInt(eipNum);
 								StringBuilder sbEipAddress = new StringBuilder();
 								for (int j = 10; j <= 17; j++)
@@ -288,7 +284,7 @@ public class driver {
 										int conflictCheckCount = 0;
 										for (int col = 0; col < assoc; col++){
 											if (col >= arrCache[row].length) break; //OOB check
-										//arrCache[row][col] = eipTag;
+										//arrCache[row][col] = dstTag;
 										//every col is checked before deciding if hit/miss
 	
 											//checks for hit/matching tag
@@ -356,7 +352,7 @@ public class driver {
 										int conflictCheckCount = 0;
 										for (int col = 0; col < assoc; col++){
 											if (col >= arrCache[row].length) break; //OOB check
-										//arrCache[row][col] = eipTag;
+										//arrCache[row][col] = srcTag;
 										//every col is checked before deciding if hit/miss
 	
 											//checks for hit/matching tag
