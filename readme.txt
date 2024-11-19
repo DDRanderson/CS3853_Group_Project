@@ -18,5 +18,10 @@ copy paste this to command line for test#1:
 	test#3:
 	java driver.java -s 8198 -b 64 -a 16 -r rr -p 4096 -n 100 –u 25 -f Trace1.trc -f Trace2_4Evaluation.trc –f Corruption.trc
 	
-copy paste this to command line for test#2:	**NOTE: make sure .trc files are inside the same directory as the driver.java!
+copy paste this to command line for test#2:	
+**NOTE: make sure .trc files are inside the same directory as the driver.java!
 	java driver.java -s 512 -b 16 -a 4 -r rr -p 1024 -n 100 –u 75 -f A-9_new_1.5.pdf.trc
+	
+	java driver.java -s 8 -b 8 -a 1 -r rnd -p 1024 -n 50 –u 75 -f A-9_new_1.5.pdf.trc
+	
+	java driver.java -s 8192 -b 64 -a 16 -r rnd -p 4096 -n 200 –u 100 -f A-9_new_1.5.pdf.trc

@@ -1,0 +1,48 @@
+Cache Simulator - CS 3853 - Group #05
+
+Trace File(s):
+	A-9_new_1.5.pdf.trc
+
+***** Cache Input Parameters *****
+
+Cache size:                     8 KB
+Block size:                     8 bytes
+Associativity:                  1
+Replacement Policy:             Random
+Physical Memory:                1024
+Percent Memory Used by System:  75.0%
+Instructions / Time Slice:      50
+
+***** Cache Calculated Values *****
+
+Total # Blocks:			1024
+Tag Size:			19 bits
+Index Size:			10 bits
+Total # Rows:			1024
+Overhead Size:			2560 bytes
+Implementation Memory Size:	10.50 KB  (10752 bytes)
+Cost:				$1.57 @ $0.15 per KB
+
+***** Physical Memory Calculated Values *****
+
+Number of Physical Pages:	262144
+Number of Pages for System:	196608
+Size of Page Table Entry:	19 bits
+Total RAM for Page Table(s):	1245184 bytes
+
+*****CACHE SIMULATION RESULTS*****
+
+Total Cache Accesses: 		595017	(350466 addresses)
+Instruction Bytes: 		737635	SrcDst Bytes: 360576
+Cache Hits: 			519545
+Cache Misses: 			75472
+--- Compulsory Misses: 		1024
+--- Conflict Misses: 		74448
+
+***** *****  CACHE HIT & MISS RATE:  ***** *****
+
+Hit Rate:                       87.32%
+Miss Rate:                      12.68%
+CPI:                            4.76 Cycles/Instruction (457576)
+Unused Cache Space:             2.50 KB / 10.50 KB = 23.81%  Waste: $0.38
+Unused Cache Blocks:            0 / 1024

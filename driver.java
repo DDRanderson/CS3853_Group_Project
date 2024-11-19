@@ -77,6 +77,7 @@ public class driver {
 		//////////////////////////////////
 
 		//print all to information to the screen and write to and output file
+
 		System.out.println("Cache Simulator - CS 3853 - Group #05\n");
 		printTraceFiles(fileList);
 		printInputParams(cacheSize, blockSize, assoc, physMem, memUsed, timeSlice, policy);
@@ -85,11 +86,13 @@ public class driver {
 		
 		/*try (PrintStream out = new PrintStream(new FileOutputStream("Team_05_Sim_n_M#1.txt"))){
 			System.setOut(out);
+
 			System.out.println("Cache Simulator - CS 3853 - Group #05\n");
 			printTraceFiles(fileList);
 			printInputParams(cacheSize, blockSize, assoc, physMem, memUsed, timeSlice, policy);
 			printCacheCalcs(cacheSize, blockSize, assoc, physMem, memUsed, timeSlice, policy);
 			printPhysicalMemoryCalcs(physMem, memUsed, fileList.size());
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}*/
@@ -102,11 +105,11 @@ public class driver {
 		//////////////////////////////////
 		//       BEGIN MILESTONE #2		//
 		//////////////////////////////////
-		int test = 0;
+
 		//global variables needed for Milestone#2
 		int addressSpace = 32;
 		int blockOffset = CalculateLogBase2(blockSize);		//the number of bits for the block offset
-		cacheSize *= 1024;
+		cacheSize *= 1024; //TODO: this needs to be fixed later for our print to file output!!
 		int numOfIndices = CalculateNumOfIndices(cacheSize, blockSize, assoc);
 		int numOfSets = CalculateNumOfSets(cacheSize,blockSize,assoc);
 		int tagBits = CalculateTagBits(addressSpace,blockOffset,CalculateLogBase2(numOfIndices));	//number of tag bits
@@ -133,6 +136,13 @@ public class driver {
 		int totalAddressesRead = 0;			//+1 EIP address & +1src & +1dst (if src/dst read occurred) 
 		int sumInstructionBytes = 0;		//sum of all the numbers in (_) after EIP
 		int sumDstSrcBytes = 0;				//if src/dst read occurred, add 4 for either one where read occurred
+		
+		int totalCacheAccesses = 0;			//total # of cache accesses
+		int totalCacheMisses = 0;			//total # of cache misses
+		int totalCycles = 0;				// total # cycles
+		int numReads = (int) Math.ceil((double) blockSize / 4); //number of memory reads to populate cache block
+		int totalInstructions = 0;
+		
 
 		int doneCount = 0;
 		for (int i = 0; doneCount < traceFileList.size(); i++){
@@ -219,12 +229,14 @@ public class driver {
 										//checks for hit/matching tag
 										if (arrCache[row][col] == eipTag){
 											sumCacheHits++;
+											totalCycles += 1; // cache hit; add 1 to total cycles
 											break;
 										}
 										//checks for compulsory miss 
 										else if (arrCache[row][col] < 0){
 											arrCache[row][col] = eipTag;
 											sumCompulsoryMisses++;
+											totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
 											break;
 										}
 										//checks for conflict miss
@@ -232,6 +244,7 @@ public class driver {
 											conflictCheckCount++;
 											if (conflictCheckCount == assoc){
 												sumConflictMisses++;
+												totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
 												//run replacement policy algorithm
 												if (policy.equals("Random")){
 													Random rand = new Random();
@@ -252,7 +265,8 @@ public class driver {
 											System.exit(0);
 										}
 									}
-
+									totalCycles += 2; // +2 cycles to execute instruction
+									totalInstructions += 1; // adds to total number instructions for cache
 								}
 								break;
 							
@@ -290,12 +304,14 @@ public class driver {
 											//checks for hit/matching tag
 											if (arrCache[row][col] == dstTag){
 												sumCacheHits++;
+												totalCycles += 1; // cache hit; +1 cycle
 												break;
 											}
 											//checks for compulsory miss 
 											else if (arrCache[row][col] < 0){
 												arrCache[row][col] = dstTag;
 												sumCompulsoryMisses++;
+												totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
 												break;
 											}
 											//checks for conflict miss
@@ -303,6 +319,7 @@ public class driver {
 												conflictCheckCount++;
 												if (conflictCheckCount == assoc){
 													sumConflictMisses++;
+													totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
 													//run replacement policy algorithm
 													if (policy.equals("Random")){
 														Random rand = new Random();
@@ -323,7 +340,7 @@ public class driver {
 												System.exit(0);
 											}
 										}
-	
+										totalCycles += 1; //calculate effective address; +1 cycle
 									}
 								}
 
@@ -358,12 +375,14 @@ public class driver {
 											//checks for hit/matching tag
 											if (arrCache[row][col] == srcTag){
 												sumCacheHits++;
+												totalCycles += 1; // cache hit; +1 cycle
 												break;
 											}
 											//checks for compulsory miss 
 											else if (arrCache[row][col] < 0){
 												arrCache[row][col] = srcTag;
 												sumCompulsoryMisses++;
+												totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
 												break;
 											}
 											//checks for conflict miss
@@ -371,6 +390,7 @@ public class driver {
 												conflictCheckCount++;
 												if (conflictCheckCount == assoc){
 													sumConflictMisses++;
+													totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
 													//run replacement policy algorithm
 													if (policy.equals("Random")){
 														Random rand = new Random();
@@ -392,7 +412,7 @@ public class driver {
 												System.exit(0);
 											}
 										}
-	
+										totalCycles += 1; //calculate effective address; +1 cycle
 									}
 								}
 
@@ -406,15 +426,78 @@ public class driver {
 				e.printStackTrace();
 			}
 		}
+		
+		totalCacheAccesses = sumCacheHits + sumCompulsoryMisses + sumConflictMisses;
+		totalCacheMisses = sumCompulsoryMisses + sumConflictMisses;
+		
 		//print cache simulation results
 		System.out.println("\n*****CACHE SIMULATION RESULTS*****\n");
-		System.out.println("Total Cache Accesses: \t" + (sumCacheHits + sumCompulsoryMisses + sumConflictMisses) + "\t(" + totalAddressesRead + " addresses)");
-		System.out.print("Instruction Bytes: \t" + sumInstructionBytes);
+		System.out.println("Total Cache Accesses: \t\t" + totalCacheAccesses + "\t(" + totalAddressesRead + " addresses)");
+		System.out.print("Instruction Bytes: \t\t" + sumInstructionBytes);
 		System.out.println("\tSrcDst Bytes: " + sumDstSrcBytes);
-		System.out.println("Cache Hits: \t\t" + sumCacheHits);
-		System.out.println("Cache Misses: \t\t" + (sumCompulsoryMisses + sumConflictMisses));
-		System.out.println("--- Compulsory Misses: \t" + sumCompulsoryMisses);
-		System.out.println("--- Conflict Misses: \t" + sumConflictMisses);
+		System.out.println("Cache Hits: \t\t\t" + sumCacheHits);
+		System.out.println("Cache Misses: \t\t\t" + totalCacheMisses);
+		System.out.println("--- Compulsory Misses: \t\t" + sumCompulsoryMisses);
+		System.out.println("--- Conflict Misses: \t\t" + sumConflictMisses);
+
+		int totalBlocks = cacheSize / blockSize;
+
+		double impSizeKB = (totalBlocks*blockSize + CalculateCacheTax(assoc,tagBits,numOfIndices)) / Math.pow(2,10);
+		int overheadSize = CalculateCacheTax(assoc,tagBits,numOfIndices);
+
+		double hitRate = (double)(sumCacheHits * 100) / totalCacheAccesses;
+		double missRate = (double)100 - hitRate;
+		double CPI = (double) totalCycles / totalInstructions;
+		double unusedKB = ((double) (((totalBlocks - sumCompulsoryMisses) * blockSize) + overheadSize) / 1024);
+		//System.out.println("********   " + (cacheSize) + "   *********");
+		double waste = 0.15 * unusedKB;
+		double percentUnused = (unusedKB / impSizeKB) * 100;
+
+
+		//TODO: fix CPI calcs
+		System.out.println("\n***** *****  CACHE HIT & MISS RATE:  ***** *****\n");
+		System.out.println("Hit Rate:                       " + String.format("%.2f",hitRate) + "%");
+		System.out.println("Miss Rate:                      " + String.format("%.2f",missRate) + "%");
+		System.out.println("CPI:                            " + String.format("%.2f",CPI) + " Cycles/Instruction (" + totalInstructions + ")");
+		System.out.printf("Unused Cache Space:             %.2f KB / %.2f KB = %.2f%%  Waste: $%.2f\n", unusedKB, impSizeKB, percentUnused, waste);
+		System.out.println("Unused Cache Blocks:            " + (totalBlocks - sumCompulsoryMisses) + " / " + totalBlocks);
+
+
+		//write Milestone results to a text file
+		try (PrintStream out = new PrintStream(new FileOutputStream("Team_05_Sim_n_M#2.txt"))){
+			cacheSize /= 1024;
+			System.setOut(out);
+
+			System.out.println("Cache Simulator - CS 3853 - Group #05\n");
+			printTraceFiles(fileList);
+			printInputParams(cacheSize, blockSize, assoc, physMem, memUsed, timeSlice, policy);
+			printCacheCalcs(cacheSize, blockSize, assoc, physMem, memUsed, timeSlice, policy);
+			printPhysicalMemoryCalcs(physMem, memUsed, fileList.size());
+
+			System.out.println("\n*****CACHE SIMULATION RESULTS*****\n");
+			System.out.println("Total Cache Accesses: \t\t" + totalCacheAccesses + "\t(" + totalAddressesRead + " addresses)");
+			System.out.print("Instruction Bytes: \t\t" + sumInstructionBytes);
+			System.out.println("\tSrcDst Bytes: " + sumDstSrcBytes);
+			System.out.println("Cache Hits: \t\t\t" + sumCacheHits);
+			System.out.println("Cache Misses: \t\t\t" + totalCacheMisses);
+			System.out.println("--- Compulsory Misses: \t\t" + sumCompulsoryMisses);
+			System.out.println("--- Conflict Misses: \t\t" + sumConflictMisses);
+
+			System.out.println("\n***** *****  CACHE HIT & MISS RATE:  ***** *****\n");
+			System.out.println("Hit Rate:                       " + String.format("%.2f",hitRate) + "%");
+			System.out.println("Miss Rate:                      " + String.format("%.2f",missRate) + "%");
+			System.out.println("CPI:                            " + String.format("%.2f",CPI) + " Cycles/Instruction (" + totalInstructions + ")");
+			System.out.printf("Unused Cache Space:             %.2f KB / %.2f KB = %.2f%%  Waste: $%.2f\n", unusedKB, impSizeKB, percentUnused, waste);
+			System.out.println("Unused Cache Blocks:            " + (totalBlocks - sumCompulsoryMisses) + " / " + totalBlocks);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		//////////////////////////////////
+		//       END MILESTONE #2		//
+		//////////////////////////////////
+
 	}
 	
 	

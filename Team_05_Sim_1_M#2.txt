@@ -1,8 +1,7 @@
 Cache Simulator - CS 3853 - Group #05
 
 Trace File(s):
-	TestTrace.trc
-	TinyTrace.trc
+	A-9_new_1.5.pdf.trc
 
 ***** Cache Input Parameters *****
 
@@ -29,4 +28,21 @@ Cost:				$86.40 @ $0.15 per KB
 Number of Physical Pages:	262144
 Number of Pages for System:	196608
 Size of Page Table Entry:	19 bits
-Total RAM for Page Table(s):	2490368 bytes
+Total RAM for Page Table(s):	1245184 bytes
+
+*****CACHE SIMULATION RESULTS*****
+
+Total Cache Accesses: 		387849	(350466 addresses)
+Instruction Bytes: 		737635	SrcDst Bytes: 360576
+Cache Hits: 			375111
+Cache Misses: 			12738
+--- Compulsory Misses: 		12376
+--- Conflict Misses: 		362
+
+***** *****  CACHE HIT & MISS RATE:  ***** *****
+
+Hit Rate:                       96.72%
+Miss Rate:                      3.28%
+CPI:                            4.26 Cycles/Instruction (296367)
+Unused Cache Space:             382.63 KB / 576.00 KB = 66.43%  Waste: $57.39
+Unused Cache Blocks:            20392 / 32768
