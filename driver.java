@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Random;
 import java.text.DecimalFormat;
 import java.io.FileOutputStream;
@@ -27,6 +28,10 @@ public class driver {
 		String policy = new String();
         ArrayList<File> fileList = new ArrayList<>();
 		ArrayList<Tracefile> traceFileList = new ArrayList<>();
+		int[] PT0 = new int[524288];
+		int[] PT1 = new int[524288];
+		int[] PT2 = new int[524288];
+
 
 		
         // stores arguments into respective variables
@@ -119,6 +124,17 @@ public class driver {
 		int sumConflictMisses = 0;
 		int timeSliceLinesToRead = timeSlice * 3;
 
+		//global variables needed for Milestone #3 
+		int pageSize = 4096; 
+        long numOfPhysPages = (physMem * 1024 * 1024) / pageSize;
+        long numOfPagesForSystem = (long) (numOfPhysPages * (memUsed / 100.0));
+		int pagesAvailableToUser = (int)numOfPhysPages - (int)numOfPagesForSystem;
+
+		LinkedList<Integer> freeUserPagesList = new LinkedList<>();
+		for (int p = 0; p < pagesAvailableToUser; p++) {
+            freeUserPagesList.add(p);
+		}
+
 		//setup the cache
 		//each block set to -1 to indicate valid is not set/no tag written
 		int[][] arrCache = new int[CalculateNumOfSets(cacheSize,blockSize,assoc)][assoc];
@@ -153,6 +169,8 @@ public class driver {
 
 			Tracefile currentFile = traceFileList.get(i);
 
+			//TODO: fix trace file line reading, as long as file stays open, we sohuldn't have to burn lines to get back to a position
+
 			//set the start reading position to the file read position
 			int currentLineReadPos = 1;
 			int startLineReadPos = currentFile.fileLineReadPos;
@@ -171,7 +189,7 @@ public class driver {
 				//reads lines in the file
 				while (!currentFile.isDoneReading)
 				{
-					line = br.readLine();
+					line = br.readLine(); 	 
 
 					//Skip lines until we reach the start line
 					if (currentLineReadPos < startLineReadPos){
@@ -187,6 +205,9 @@ public class driver {
 
 					if (line == null){
 						currentFile.isDoneReading = true;
+						//TODO: for Milestone 3, once file is done reading, we must "free" all assigned User Page
+						// 		likely iterate through the trace files PT array
+						//		if an entry is not equal to -1, add this to freeUserPagesList
 						doneCount++;
 						break;
 					}
@@ -199,7 +220,7 @@ public class driver {
 					{
 						switch(charArray[0])
 						{
-							//process the instruction address, hex address is [10-17]
+							//process the INSTRUCTION ADDRESS, hex address is [10-17]
 							case 'E':
 
 								String eipNum = new StringBuilder().append(charArray[5]).append(charArray[6]).toString();
@@ -212,6 +233,46 @@ public class driver {
 									sbEipAddress.append(charArray[j]);
 								}
 								String eipAddress = sbEipAddress.toString();
+
+								/////////////////////////////////
+								/// 
+								///  TODO: MILESTONE 3 STUFF HERE!?
+								/// 
+								/// break address into two parts
+								/// 	PAGE NUMBER = top 20 bits
+								/// 	PAGE OFFSET = bottom 12 bits
+								/// 
+								/// check the current trace files Page Table: PT0[PAGE NUMBER] == ?
+								/// 	if != -1
+								/// 		page table hit
+								/// 	if == -1
+								/// 		set value of index to first available freeUserPagesList.getFirst()
+								/// 		remove from freeUserPagesList.removeFirst()
+								/// 	if == -1 && freeUserPagesList is empty
+								/// 		remove a User Page from another trace file's PT to give to current trace file's PT
+								/// 			use any algorithm to choose
+								/// 			likely pick from another random file first, will choose self if only trace file
+								/// 		**how do we remove a User Page from another Trace files's PT, and reassign it?
+								/// 
+								/// create physical address from User Page and Page Offset
+								/// 	ex] 0x12345678
+								/// 		0x12345 is the USER PAGE pulled freeUserPagesList
+								/// 		0x678 is the PAGE OFFSET(bottom 12 bits)
+								/// 
+								/// run this new Physical Address through Milestone 2 caching algorithm
+								/// 
+								/// things to track:
+								/// 	Page Table Hits
+								///			if VP is already mapped in page table
+								///
+								///		Pages from Free
+								///			# of times a free user page is assigned to a trace files PT
+								///
+								///		Total Page Faults
+								///			# of times no more free user pages are available when a trace file needs one for it's PT
+								///  
+								///
+								/////////////////////////////////
 
 								//perform eip cache check and update cache if necessary
 								int eipTag = parseTagBitsToInt(toBinaryString(eipAddress), tagBits);
@@ -685,6 +746,7 @@ public class driver {
 		String strBlock = null;
 		StringBuilder sbBlock = new StringBuilder();
 		//block [(tag bits + index bits) -> (tag bits + index bits + block bits)-1
+		//TODO: fix these hard coded values!!
 		for (int j = 28; j <= 31; j++)
 		{
 			sbBlock.append(charArray[j]);
@@ -699,4 +761,15 @@ public class driver {
 		return (int) Math.floor( (block + bytesToRead - 1) / blockSize );
 	}
 
+	//TODO: make method to take an address and get the top 20 bits and return as an int
+	// use toBinaryString method to get the hex address into binary
+	// use a for loop from 0-19 to create a new char array for the top 20 bits
+	// strBits = sbBits.toString();
+	//	int iTop20 = Integer.parseInt(strBits, 2);	//binary string to int
+	
+	//TODO: make method to take an address  and get bottom 12 bits and return as an int
+	// use toBinaryString method to get the hex address into binary
+	// use a for loop from 20-31 to create a new char array for the bottom 12 bits
+	// strBits = sbBits.toString();
+	//	int iBottom12 = Integer.parseInt(strBits, 2);	//binary string to int
 }	
