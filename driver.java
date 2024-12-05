@@ -827,6 +827,15 @@ public class driver {
         }
 	}
 
+	public int countUsedPTEntries(int[] pageTable){
+		int cnt = 0;
+
+        for (int entry : pageTable) {
+            if (entry == -1) cnt++;
+        }
+		return cnt;
+	}
+
 //	public static void printPageTableUsage(ArrayList<File> fileList, ){
 //
 //	}
