@@ -1,9 +1,6 @@
 import java.io.BufferedReader;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.text.DecimalFormat;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -823,4 +820,14 @@ public class driver {
 		String strBits = sbBits.toString();
 		return Integer.parseInt(strBits, 2);
 	}
+
+	public void initializePTList(ArrayList<int[]> pageTableList){
+        for (int[] currPageTable : pageTableList) {
+            Arrays.fill(currPageTable, -1);
+        }
+	}
+
+//	public static void printPageTableUsage(ArrayList<File> fileList, ){
+//
+//	}
 }	
