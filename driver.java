@@ -137,7 +137,7 @@ public class driver {
 		int pagesAvailableToUser = (int)numOfPhysPages - (int)numOfPagesForSystem;
 		int totalPageTableHits = 0;
 
-
+		initializePTList(pageTableList);
 
 		//Linked List of all available pages that aren't being used by system
 		LinkedList<Integer> freeUserPagesList = new LinkedList<>();
@@ -821,7 +821,7 @@ public class driver {
 		return Integer.parseInt(strBits, 2);
 	}
 
-	public void initializePTList(ArrayList<int[]> pageTableList){
+	public static void initializePTList(ArrayList<int[]> pageTableList){
         for (int[] currPageTable : pageTableList) {
             Arrays.fill(currPageTable, -1);
         }
