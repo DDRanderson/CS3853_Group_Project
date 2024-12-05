@@ -28,9 +28,7 @@ public class driver {
 		String policy = new String();
         ArrayList<File> fileList = new ArrayList<>();
 		ArrayList<Tracefile> traceFileList = new ArrayList<>();
-		int[] PT0 = new int[524288];
-		int[] PT1 = new int[524288];
-		int[] PT2 = new int[524288];
+		ArrayList<int[]> pageTableList = new ArrayList<>();
 
 
 		
@@ -69,6 +67,7 @@ public class driver {
 					File f = new File(args[++i]);
 					fileList.add(f);
 					traceFileList.add(new Tracefile(f));
+					pageTableList.add(new int[524288]);	
 					//traceFileList.add(new Tracefile(f.getName()));
 					break;
 				
@@ -124,12 +123,17 @@ public class driver {
 		int sumConflictMisses = 0;
 		int timeSliceLinesToRead = timeSlice * 3;
 
+
+
 		//global variables needed for Milestone #3 
 		int pageSize = 4096; 
         long numOfPhysPages = (physMem * 1024 * 1024) / pageSize;
         long numOfPagesForSystem = (long) (numOfPhysPages * (memUsed / 100.0));
 		int pagesAvailableToUser = (int)numOfPhysPages - (int)numOfPagesForSystem;
 
+
+
+		//Linked List of all available pages that aren't being used by system
 		LinkedList<Integer> freeUserPagesList = new LinkedList<>();
 		for (int p = 0; p < pagesAvailableToUser; p++) {
             freeUserPagesList.add(p);
