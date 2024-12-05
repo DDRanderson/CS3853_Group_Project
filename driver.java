@@ -138,6 +138,7 @@ public class driver {
         long numOfPhysPages = (physMem * 1024 * 1024) / pageSize;
         long numOfPagesForSystem = (long) (numOfPhysPages * (memUsed / 100.0));
 		int pagesAvailableToUser = (int)numOfPhysPages - (int)numOfPagesForSystem;
+		int totalPageTableHits = 0;
 
 
 
@@ -184,7 +185,7 @@ public class driver {
 			String line = null;
 			char[] charArray = new char[100];
 			//reads from all trace files until all trace files are done reading
-			//index i is being used by both traceFileList and readers list
+			//index i is being used by both traceFileList, readers list, and pageTableList
 			for (int i = 0; doneCount < traceFileList.size(); i++){
 				//loop back to beginning of trace files array
 				if(i == traceFileList.size()) {
@@ -238,26 +239,34 @@ public class driver {
 								}
 								String eipAddress = sbEipAddress.toString();
 
-								/////////////////////////////////
-								/// 
-								///  TODO: MILESTONE 3 STUFF HERE!?
-								/// 
+								///  TODO: MILESTONE 3 STUFF HERE
 								/// break address into two parts
 								/// 	PAGE NUMBER = top 20 bits
 								/// 	PAGE OFFSET = bottom 12 bits
-								/// 
-								/// check the current trace files Page Table: PT0[PAGE NUMBER] == ?
-								/// 	if != -1
-								/// 		page table hit
-								/// 	if == -1
-								/// 		set value of index to first available freeUserPagesList.getFirst()
-								/// 		remove from freeUserPagesList.removeFirst()
-								/// 	if == -1 && freeUserPagesList is empty
+								int eipPageNumber = getPageNumBits(eipAddress);
+								int eipPageOffset = getPageOffsetBits(eipAddress);
+
+								/// check the current trace files Page Table: pageTabeList[pageNumber] == ?
+								int[] pageTable = pageTableList.get(i);
+								if (pageTable[eipPageNumber] != 0){		//page table hit
+									/* page table hit */
+								} else if (pageTable[eipPageNumber] == 0){		//page table miss
+									if(freeUserPagesList.isEmpty()){
+										/* get page from another PT, or self */
+									} else{
+										pageTable[eipPageNumber] = freeUserPagesList.getFirst();
+										freeUserPagesList.removeFirst();
+									}
+									
+								}
+
+								/// 	if == 0 && freeUserPagesList is empty
 								/// 		remove a User Page from another trace file's PT to give to current trace file's PT
 								/// 			use any algorithm to choose
 								/// 			likely pick from another random file first, will choose self if only trace file
 								/// 		**how do we remove a User Page from another Trace files's PT, and reassign it?
-								/// 
+								
+
 								/// create physical address from User Page and Page Offset
 								/// 	ex] 0x12345678
 								/// 		0x12345 is the USER PAGE pulled freeUserPagesList
@@ -525,6 +534,25 @@ public class driver {
 		System.out.println("CPI:                            " + String.format("%.2f",CPI) + " Cycles/Instruction (" + totalInstructions + ")");
 		System.out.printf("Unused Cache Space:             %.2f KB / %.2f KB = %.2f%%  Waste: $%.2f\n", unusedKB, impSizeKB, percentUnused, waste);
 		System.out.println("Unused Cache Blocks:            " + (totalBlocks - sumCompulsoryMisses) + " / " + totalBlocks);
+
+
+		System.out.println("\n***** *****  PHYSICAL MEMORY SIMULATION RESULTS:  ***** *****\n");
+		System.out.println("Physical Pages Used By SYSTEM:  " + numOfPagesForSystem);
+		System.out.println("Pages Available to User:        " + pagesAvailableToUser);
+		System.out.println();
+		System.out.println("Virtual Pages Mapped:         " /* total mapped virtual pages */);
+		System.out.println("        ----------------------");
+		System.out.println("        Page Table Hits:      " /* total page table hits */);
+		System.out.println();
+		System.out.println("        Pages from Free:      " /* total pages assigned from free users pages */);
+		System.out.println();
+		System.out.println("        Total Page Faults     " /* total times page fault occurs */);
+		System.out.println();
+		System.out.println();
+		System.out.println("Page Table Usage Per Process:");
+		System.out.println("------------------------------");
+		System.out.println();
+		/* TODO: for loop that prints data from each trace file, include index number and tracefile name*/
 
 
 		//write Milestone results to a text file
