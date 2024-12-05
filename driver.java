@@ -761,15 +761,36 @@ public class driver {
 		return (int) Math.floor( (block + bytesToRead - 1) / blockSize );
 	}
 
-	//TODO: make method to take an address and get the top 20 bits and return as an int
-	// use toBinaryString method to get the hex address into binary
-	// use a for loop from 0-19 to create a new char array for the top 20 bits
-	// strBits = sbBits.toString();
-	//	int iTop20 = Integer.parseInt(strBits, 2);	//binary string to int
-	
-	//TODO: make method to take an address  and get bottom 12 bits and return as an int
-	// use toBinaryString method to get the hex address into binary
-	// use a for loop from 20-31 to create a new char array for the bottom 12 bits
-	// strBits = sbBits.toString();
-	//	int iBottom12 = Integer.parseInt(strBits, 2);	//binary string to int
+	public static int getPageNumBits(String str) {
+		String binaryAddress = toBinaryString(str);
+		binaryAddress = String.format("%32s", binaryAddress).replace(' ', '0');
+
+		StringBuilder sbBits = new StringBuilder();
+
+		// Loop through the first 20 bits of the binary string
+		for (int i = 0; i < 20; i++) {
+			sbBits.append(binaryAddress.charAt(i));
+		}
+
+		// Convert the binary string to an integer
+		String strBits = sbBits.toString();
+		return Integer.parseInt(strBits, 2);
+	}
+
+	public static int getPageOffsetBits(String str) {
+		// Convert the address to a binary string
+		String binaryAddress = toBinaryString(str);
+		binaryAddress = String.format("%32s", binaryAddress).replace(' ', '0');
+
+		StringBuilder sbBits = new StringBuilder();
+
+		// Loop through the bits from position 20 to 31
+		for (int i = 20; i < 32; i++) {
+			sbBits.append(binaryAddress.charAt(i));
+		}
+
+		// Convert the binary string to an integer
+		String strBits = sbBits.toString();
+		return Integer.parseInt(strBits, 2);
+	}
 }	
