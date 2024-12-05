@@ -746,8 +746,7 @@ public class driver {
 		String strBlock = null;
 		StringBuilder sbBlock = new StringBuilder();
 		//block [(tag bits + index bits) -> (tag bits + index bits + block bits)-1
-		//TODO: fix these hard coded values!!
-		for (int j = 28; j <= 31; j++)
+		for (int j = (tagBits + indexBits); j <= (tagBits + indexBits + blockOffset - 1); j++)
 		{
 			sbBlock.append(charArray[j]);
 		}
