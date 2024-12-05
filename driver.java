@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
 import java.text.DecimalFormat;
 import java.io.FileOutputStream;
@@ -110,10 +111,14 @@ public class driver {
 		//       BEGIN MILESTONE #2		//
 		//////////////////////////////////
 
-		//global variables needed for Milestone#2
+		////
+		// 
+		//	GLOBAL VARIABLES needed for Milestone#2
+		//
+		////
 		int addressSpace = 32;
 		int blockOffset = CalculateLogBase2(blockSize);		//the number of bits for the block offset
-		cacheSize *= 1024; //TODO: this needs to be fixed later for our print to file output!!
+		cacheSize *= 1024; //this needs to be fixed later for our print to file output!!
 		int numOfIndices = CalculateNumOfIndices(cacheSize, blockSize, assoc);
 		int numOfSets = CalculateNumOfSets(cacheSize,blockSize,assoc);
 		int tagBits = CalculateTagBits(addressSpace,blockOffset,CalculateLogBase2(numOfIndices));	//number of tag bits
@@ -124,8 +129,11 @@ public class driver {
 		int timeSliceLinesToRead = timeSlice * 3;
 
 
-
-		//global variables needed for Milestone #3 
+		////
+		//
+		// GLOBAL VARIABLES needed for Milestone #3 
+		//
+		////
 		int pageSize = 4096; 
         long numOfPhysPages = (physMem * 1024 * 1024) / pageSize;
         long numOfPagesForSystem = (long) (numOfPhysPages * (memUsed / 100.0));
@@ -163,9 +171,336 @@ public class driver {
 		int numReads = (int) Math.ceil((double) blockSize / 4); //number of memory reads to populate cache block
 		int totalInstructions = 0;
 		
-
+		/* NEW FOOR LOOP CODE */
+		List<BufferedReader> readers = new ArrayList<>();
 		int doneCount = 0;
-		for (int i = 0; doneCount < traceFileList.size(); i++){
+		try {
+			//creates list of buffered readers to keep each trace file open
+			for (File filePath : fileList) {
+                BufferedReader reader = new BufferedReader(new FileReader(filePath));
+                readers.add(reader);
+			}
+		
+			String line = null;
+			char[] charArray = new char[100];
+			//reads from all trace files until all trace files are done reading
+			//index i is being used by both traceFileList and readers list
+			for (int i = 0; doneCount < traceFileList.size(); i++){
+				//loop back to beginning of trace files array
+				if(i == traceFileList.size()) {
+					i = 0;
+				}
+
+				Tracefile currentTraceFile = traceFileList.get(i);
+
+				if(currentTraceFile.isDoneReading) {
+					continue;
+				}
+
+				int numOfLinesRead = 0;
+				//reads lines in the file
+				while (!currentTraceFile.isDoneReading)
+				{
+					line = readers.get(i).readLine(); 	 
+					numOfLinesRead++;
+
+					//Break out if we hit the final line to read
+					if (numOfLinesRead == timeSliceLinesToRead && traceFileList.size() != 1){
+						break;
+					}
+
+					if (line == null){
+						currentTraceFile.isDoneReading = true;
+						//TODO: for Milestone 3, once file is done reading, we must "free" all assigned User Page
+						// 		likely iterate through the trace files PT array
+						//		if an entry is not equal to -1, add this to freeUserPagesList
+						doneCount++;
+						break;
+					}
+
+					//convert line to a char array
+					charArray = line.toCharArray();
+					if(charArray.length != 0)
+					{
+						switch(charArray[0])
+						{
+							//process the INSTRUCTION ADDRESS, hex address is [10-17]
+							case 'E':
+
+								String eipNum = new StringBuilder().append(charArray[5]).append(charArray[6]).toString();
+									if (Integer.parseInt(eipNum) == 0) continue;	//check for eip not reading any bytes
+								totalAddressesRead++;
+								sumInstructionBytes += Integer.parseInt(eipNum);
+								StringBuilder sbEipAddress = new StringBuilder();
+								for (int j = 10; j <= 17; j++)
+								{
+									sbEipAddress.append(charArray[j]);
+								}
+								String eipAddress = sbEipAddress.toString();
+
+								/////////////////////////////////
+								/// 
+								///  TODO: MILESTONE 3 STUFF HERE!?
+								/// 
+								/// break address into two parts
+								/// 	PAGE NUMBER = top 20 bits
+								/// 	PAGE OFFSET = bottom 12 bits
+								/// 
+								/// check the current trace files Page Table: PT0[PAGE NUMBER] == ?
+								/// 	if != -1
+								/// 		page table hit
+								/// 	if == -1
+								/// 		set value of index to first available freeUserPagesList.getFirst()
+								/// 		remove from freeUserPagesList.removeFirst()
+								/// 	if == -1 && freeUserPagesList is empty
+								/// 		remove a User Page from another trace file's PT to give to current trace file's PT
+								/// 			use any algorithm to choose
+								/// 			likely pick from another random file first, will choose self if only trace file
+								/// 		**how do we remove a User Page from another Trace files's PT, and reassign it?
+								/// 
+								/// create physical address from User Page and Page Offset
+								/// 	ex] 0x12345678
+								/// 		0x12345 is the USER PAGE pulled freeUserPagesList
+								/// 		0x678 is the PAGE OFFSET(bottom 12 bits)
+								/// 
+								/// run this new Physical Address through Milestone 2 caching algorithm
+								/// 
+								/// things to track:
+								/// 	Page Table Hits
+								///			if VP is already mapped in page table
+								///
+								///		Pages from Free
+								///			# of times a free user page is assigned to a trace files PT
+								///
+								///		Total Page Faults
+								///			# of times no more free user pages are available when a trace file needs one for it's PT
+								///  
+								///
+								/////////////////////////////////
+
+								//perform eip cache check and update cache if necessary
+								int eipTag = parseTagBitsToInt(toBinaryString(eipAddress), tagBits);
+								int eipIndex = parseIndexBitsToInt(toBinaryString(eipAddress), tagBits, indexBits);
+								int eipBlock =  parseBlockBitsToInt(toBinaryString(eipAddress), tagBits, indexBits, blockOffset);
+								int eipAddBlock = addBlockRows(eipBlock, Integer.parseInt(eipNum), blockSize);
+								for (int row = eipIndex; row < (eipIndex + eipAddBlock + 1); row++){
+									if (row >= arrCache.length) break; //OOB check
+									int conflictCheckCount = 0;
+									for (int col = 0; col < assoc; col++){
+										if (col >= arrCache[row].length) break; //OOB check
+									//arrCache[row][col] = eipTag;
+									//every col is checked before deciding if hit/miss
+
+										//checks for hit/matching tag
+										if (arrCache[row][col] == eipTag){
+											sumCacheHits++;
+											totalCycles += 1; // cache hit; add 1 to total cycles
+											break;
+										}
+										//checks for compulsory miss 
+										else if (arrCache[row][col] < 0){
+											arrCache[row][col] = eipTag;
+											sumCompulsoryMisses++;
+											totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
+											break;
+										}
+										//checks for conflict miss
+										else if (arrCache[row][col] != eipTag){
+											conflictCheckCount++;
+											if (conflictCheckCount == assoc){
+												sumConflictMisses++;
+												totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
+												//run replacement policy algorithm
+												if (policy.equals("Random")){
+													Random rand = new Random();
+													//random number between [0 - (associativity-1)]
+													int n = rand.nextInt(assoc);
+													arrCache[row][n] = eipTag;
+												} else {
+													//Round Robin
+													int replaceCol = replacementIndex[row];
+													arrCache[row][replaceCol] = eipTag;
+													replacementIndex[row] = (replaceCol + 1) % assoc; //update replacement index
+												}
+												break;
+											}
+											continue;
+										} else {
+											System.out.println("Error in EIP cache check");
+											System.exit(0);
+										}
+									}
+									totalCycles += 2; // +2 cycles to execute instruction
+									totalInstructions += 1; // adds to total number instructions for cache
+								}
+								break;
+							
+
+
+
+							//process both dst[6-13][15-22] and src[33-40][42-49] addresses
+							//always 4 bytes read if non-zero address for both dst and src
+							case 'd':
+								//dstM:
+								String dstAddress = null;
+								StringBuilder sbDst = new StringBuilder();
+								for (int j = 6; j <= 13; j++)
+								{
+									sbDst.append(charArray[j]);
+								}
+								dstAddress = sbDst.toString();
+								if (!dstAddress.equals("00000000") || charArray[15] != '-')	//check if dst is actually not reading bytes
+								{
+									sumDstSrcBytes += 4;
+									totalAddressesRead++;
+									//dst cache check
+									int dstTag = parseTagBitsToInt(toBinaryString(dstAddress), tagBits);
+									int dstIndex = parseIndexBitsToInt(toBinaryString(dstAddress), tagBits, indexBits);
+									int dstBlock =  parseBlockBitsToInt(toBinaryString(dstAddress), tagBits, indexBits, blockOffset);
+									int dstAddBlock = addBlockRows(dstBlock, 4, blockSize);
+									for (int row = dstIndex; row < (dstIndex + dstAddBlock + 1); row++){
+										if (row >= arrCache.length) break; //OOB check
+										int conflictCheckCount = 0;
+										for (int col = 0; col < assoc; col++){
+											if (col >= arrCache[row].length) break; //OOB check
+										//arrCache[row][col] = dstTag;
+										//every col is checked before deciding if hit/miss
+	
+											//checks for hit/matching tag
+											if (arrCache[row][col] == dstTag){
+												sumCacheHits++;
+												totalCycles += 1; // cache hit; +1 cycle
+												break;
+											}
+											//checks for compulsory miss 
+											else if (arrCache[row][col] < 0){
+												arrCache[row][col] = dstTag;
+												sumCompulsoryMisses++;
+												totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
+												break;
+											}
+											//checks for conflict miss
+											else if (arrCache[row][col] != dstTag){
+												conflictCheckCount++;
+												if (conflictCheckCount == assoc){
+													sumConflictMisses++;
+													totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
+													//run replacement policy algorithm
+													if (policy.equals("Random")){
+														Random rand = new Random();
+														//random number between [0 - (associativity-1)]
+														int n = rand.nextInt(assoc);
+														arrCache[row][n] = dstTag;
+													} else {
+														//Round Robin
+														int replaceCol = replacementIndex[row];
+														arrCache[row][replaceCol] = dstTag;
+														replacementIndex[row] = (replaceCol + 1) % assoc; //update replacement index
+													}
+													break;
+												}
+												continue;
+											} else {
+												System.out.println("Error in dstM cache check");
+												System.exit(0);
+											}
+										}
+										totalCycles += 1; //calculate effective address; +1 cycle
+									}
+								}
+
+
+
+
+								//srcM:
+								String srcAddress = null;
+								StringBuilder sbSrc = new StringBuilder();
+								for (int j = 33; j <= 40; j++)
+								{
+									sbSrc.append(charArray[j]);
+								}
+								srcAddress = sbSrc.toString();
+								if (!srcAddress.equals("00000000") || charArray[42] != '-')	//check if src is actually not reading bytes
+								{
+									sumDstSrcBytes += 4;
+									totalAddressesRead++;
+									//src cache check
+									int srcTag = parseTagBitsToInt(toBinaryString(srcAddress), tagBits);
+									int srcIndex = parseIndexBitsToInt(toBinaryString(srcAddress), tagBits, indexBits);
+									int srcBlock =  parseBlockBitsToInt(toBinaryString(srcAddress), tagBits, indexBits, blockOffset);
+									int srcAddBlock = addBlockRows(srcBlock, 4, blockSize);
+									for (int row = srcIndex; row < (srcIndex + srcAddBlock + 1); row++){
+										if (row >= arrCache.length) break; //OOB check
+										int conflictCheckCount = 0;
+										for (int col = 0; col < assoc; col++){
+											if (col >= arrCache[row].length) break; //OOB check
+										//arrCache[row][col] = srcTag;
+										//every col is checked before deciding if hit/miss
+	
+											//checks for hit/matching tag
+											if (arrCache[row][col] == srcTag){
+												sumCacheHits++;
+												totalCycles += 1; // cache hit; +1 cycle
+												break;
+											}
+											//checks for compulsory miss 
+											else if (arrCache[row][col] < 0){
+												arrCache[row][col] = srcTag;
+												sumCompulsoryMisses++;
+												totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
+												break;
+											}
+											//checks for conflict miss
+											else if (arrCache[row][col] != srcTag){
+												conflictCheckCount++;
+												if (conflictCheckCount == assoc){
+													sumConflictMisses++;
+													totalCycles += (4 * numReads); // cache miss; 4 * num reads to populate block
+													//run replacement policy algorithm
+													if (policy.equals("Random")){
+														Random rand = new Random();
+														//random number between [0 - (associativity-1)]
+														int n = rand.nextInt(assoc);
+														arrCache[row][n] = srcTag;
+													} else {
+														//Round Robin
+														int replaceCol = replacementIndex[row];
+														arrCache[row][replaceCol] = srcTag;
+														replacementIndex[row] = (replaceCol + 1) % assoc; //update replacement index
+														
+													}
+													break;
+												}
+												continue;
+											} else {
+												System.out.println("Error in dstM cache check");
+												System.exit(0);
+											}
+										}
+										totalCycles += 1; //calculate effective address; +1 cycle
+									}
+								}
+
+							default:
+								break;
+						}
+					}
+				}
+
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+
+
+
+
+
+
+
+		/* OLD FOR LOOP CODE */
+		/*for (int i = 0; doneCount < traceFileList.size(); i++){
 			//loop back to beginning of trace files array
 			if(i == traceFileList.size()) {
 				i = 0;
@@ -173,7 +508,7 @@ public class driver {
 
 			Tracefile currentFile = traceFileList.get(i);
 
-			//TODO: fix trace file line reading, as long as file stays open, we sohuldn't have to burn lines to get back to a position
+			//TODO: fix trace file line reading, as long as file stays open, we shouldn't have to burn lines to get back to a position
 
 			//set the start reading position to the file read position
 			int currentLineReadPos = 1;
@@ -486,11 +821,12 @@ public class driver {
 						}
 					}
 				}
-				br.close();
+				
+
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-		}
+		}*/
 		
 		totalCacheAccesses = sumCacheHits + sumCompulsoryMisses + sumConflictMisses;
 		totalCacheMisses = sumCompulsoryMisses + sumConflictMisses;
@@ -519,7 +855,6 @@ public class driver {
 		double percentUnused = (unusedKB / impSizeKB) * 100;
 
 
-		//TODO: fix CPI calcs
 		System.out.println("\n***** *****  CACHE HIT & MISS RATE:  ***** *****\n");
 		System.out.println("Hit Rate:                       " + String.format("%.2f",hitRate) + "%");
 		System.out.println("Miss Rate:                      " + String.format("%.2f",missRate) + "%");
@@ -529,7 +864,7 @@ public class driver {
 
 
 		//write Milestone results to a text file
-		try (PrintStream out = new PrintStream(new FileOutputStream("Team_05_Sim_n_M#2.txt"))){
+		/*try (PrintStream out = new PrintStream(new FileOutputStream("Team_05_Sim_n_M#2.txt"))){
 			cacheSize /= 1024;
 			System.setOut(out);
 
@@ -557,7 +892,7 @@ public class driver {
 
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
+		}*/
 
 		//////////////////////////////////
 		//       END MILESTONE #2		//
