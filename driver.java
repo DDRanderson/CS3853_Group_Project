@@ -703,7 +703,7 @@ public class driver {
 
 
 		//write Milestone results to a text file
-		/*try (PrintStream out = new PrintStream(new FileOutputStream("Team_05_Sim_n_M#3.txt"))){
+		try (PrintStream out = new PrintStream(new FileOutputStream("Team_05_Sim_n_M#3.txt"))){
 			cacheSize /= 1024;
 			System.setOut(out);
 
@@ -742,16 +742,12 @@ public class driver {
 			System.out.println("        Total Page Faults       " + totalPageFaults);
 			System.out.println();
 			System.out.println();
-			System.out.println("Page Table Usage Per Process:");
-			System.out.println("------------------------------");
-			System.out.println();
 
-			long PTOverhead = (524288L * 4 * fileList.size()) / 8;
 			printPageTableUsage(fileList, pageTableList, PTOverhead);
 
 		} catch (IOException e) {
 			e.printStackTrace();
-		}*/
+		}
 
 	}
 	
