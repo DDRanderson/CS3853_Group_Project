@@ -135,7 +135,10 @@ public class driver {
         long numOfPhysPages = (physMem * 1024 * 1024) / pageSize;
         long numOfPagesForSystem = (long) (numOfPhysPages * (memUsed / 100.0));
 		int pagesAvailableToUser = (int)numOfPhysPages - (int)numOfPagesForSystem;
+		int totalMappedVirtualPages = 0;
 		int totalPageTableHits = 0;
+		int totalPagesFromFree = 0;
+		int totalPageFaults = 0;
 
 		initializePTList(pageTableList);
 
@@ -144,6 +147,10 @@ public class driver {
 		for (int p = 0; p < pagesAvailableToUser; p++) {
             freeUserPagesList.add(p);
 		}
+
+		//Linked List of all used pages from list of User Pages
+		LinkedList<Integer> usedUserPagesList = new LinkedList<>();
+		
 
 		//setup the cache
 		//each block set to -1 to indicate valid is not set/no tag written
@@ -209,9 +216,13 @@ public class driver {
 
 					if (line == null){
 						currentTraceFile.isDoneReading = true;
-						//TODO: for Milestone 3, once file is done reading, we must "free" all assigned User Page
-						// 		likely iterate through the trace files PT array
-						//		if an entry is not equal to -1, add this to freeUserPagesList
+						//once file is done reading, we must "free" all assigned User Page
+						int[] temp = pageTableList.get(i);
+						for (int t : temp ){
+							if (temp[t] != -1){
+								freeUserPagesList.add(temp[t]);
+							}
+						}
 						doneCount++;
 						break;
 					}
@@ -234,9 +245,9 @@ public class driver {
 								{
 									sbEipAddress.append(charArray[j]);
 								}
-								String eipAddress = sbEipAddress.toString();
+								String eipAddress = sbEipAddress.toString();	//a hex string
 
-								///  TODO: MILESTONE 3 STUFF HERE
+								///  MILESTONE 3 STUFF HERE
 								/// break address into two parts
 								/// 	PAGE NUMBER = top 20 bits
 								/// 	PAGE OFFSET = bottom 12 bits
@@ -244,45 +255,55 @@ public class driver {
 								int eipPageOffset = getPageOffsetBits(eipAddress);
 
 								/// check the current trace files Page Table: pageTabeList[pageNumber] == ?
-								int[] pageTable = pageTableList.get(i);
-								if (pageTable[eipPageNumber] != 0){		//page table hit
-									/* page table hit */
-								} else if (pageTable[eipPageNumber] == 0){		//page table miss
+								int[] eipPageTable = pageTableList.get(i);
+								if (eipPageTable[eipPageNumber] != -1){		//page table hit
+									totalPageTableHits++;
+								} else if (eipPageTable[eipPageNumber] == -1){		//page table miss
 									if(freeUserPagesList.isEmpty()){
-										/* get page from another PT, or self */
+										totalPageFaults++;
+										// pick from another random file first, will choose self if only trace file
+										int checker = 0;
+										for (int j = i; j <= traceFileList.size(); j++){
+											if (j == traceFileList.size()){
+												j = 0;
+											}
+
+											Tracefile tempTrace = traceFileList.get(j);
+											if (checker == traceFileList.size()){
+												eipPageTable[eipPageNumber] = FindFirstFreePage(pageTableList.get(i));
+												break;
+											}
+											if (j == i){
+												checker++;
+												continue;
+											}
+											if (tempTrace.isDoneReading){
+												checker++;
+												continue;
+											} 
+											
+											//pull from trace file j
+											eipPageTable[eipPageNumber] = FindFirstFreePage(pageTableList.get(j));
+											break;
+										}
+										
 									} else{
-										pageTable[eipPageNumber] = freeUserPagesList.getFirst();
+										eipPageTable[eipPageNumber] = freeUserPagesList.getFirst();
 										freeUserPagesList.removeFirst();
+										totalPagesFromFree++;
 									}
 									
 								}
 
-								/// 	if == 0 && freeUserPagesList is empty
-								/// 		remove a User Page from another trace file's PT to give to current trace file's PT
-								/// 			use any algorithm to choose
-								/// 			likely pick from another random file first, will choose self if only trace file
-								/// 		**how do we remove a User Page from another Trace files's PT, and reassign it?
-								
-
 								/// create physical address from User Page and Page Offset
-								/// 	ex] 0x12345678
-								/// 		0x12345 is the USER PAGE pulled freeUserPagesList
-								/// 		0x678 is the PAGE OFFSET(bottom 12 bits)
-								/// 
+								/// ex] 0x12345678
+								/// 	0x12345 is the USER PAGE pulled from freeUserPagesList
+								/// 	0x678 is the PAGE OFFSET(bottom 12 bits)
+								long longEIPAddress = (eipPageTable[eipPageNumber] * 4096) + eipPageOffset;
+								eipAddress = String.format("%08X", longEIPAddress);
+							
 								/// run this new Physical Address through Milestone 2 caching algorithm
-								/// 
-								/// things to track:
-								/// 	Page Table Hits
-								///			if VP is already mapped in page table
-								///
-								///		Pages from Free
-								///			# of times a free user page is assigned to a trace files PT
-								///
-								///		Total Page Faults
-								///			# of times no more free user pages are available when a trace file needs one for it's PT
-								///  
-								///
-								/////////////////////////////////
+								/// MILESTONE 3 STUFF ENDS HERE!!
 
 								//perform eip cache check and update cache if necessary
 								int eipTag = parseTagBitsToInt(toBinaryString(eipAddress), tagBits);
@@ -357,6 +378,65 @@ public class driver {
 								dstAddress = sbDst.toString();
 								if (!dstAddress.equals("00000000") || charArray[15] != '-')	//check if dst is actually not reading bytes
 								{
+
+								///  MILESTONE 3 STUFF HERE
+								/// break address into two parts
+								/// 	PAGE NUMBER = top 20 bits
+								/// 	PAGE OFFSET = bottom 12 bits
+								int dstPageNumber = getPageNumBits(dstAddress);
+								int dstPageOffset = getPageOffsetBits(dstAddress);
+
+								/// check the current trace files Page Table: pageTabeList[pageNumber] == ?
+								int[] dstpageTable = pageTableList.get(i);
+								if (dstpageTable[dstPageNumber] != -1){		//page table hit
+									totalPageTableHits++;
+								} else if (dstpageTable[dstPageNumber] == -1){		//page table miss
+									if(freeUserPagesList.isEmpty()){
+										totalPageFaults++;
+										// pick from another random file first, will choose self if only trace file
+										int checker = 0;
+										for (int j = i; j <= traceFileList.size(); j++){
+											if (j == traceFileList.size()){
+												j = 0;
+											}
+
+											Tracefile tempTrace = traceFileList.get(j);
+											if (checker == traceFileList.size()){
+												dstpageTable[dstPageNumber] = FindFirstFreePage(pageTableList.get(i));
+												break;
+											}
+											if (j == i){
+												checker++;
+												continue;
+											}
+											if (tempTrace.isDoneReading){
+												checker++;
+												continue;
+											} 
+											
+											//pull from trace file j
+											dstpageTable[dstPageNumber] = FindFirstFreePage(pageTableList.get(j));
+											break;
+										}
+										
+									} else{
+										dstpageTable[dstPageNumber] = freeUserPagesList.getFirst();
+										freeUserPagesList.removeFirst();
+										totalPagesFromFree++;
+									}
+									
+								}
+
+								/// create physical address from User Page and Page Offset
+								/// ex] 0x12345678
+								/// 	0x12345 is the USER PAGE pulled from freeUserPagesList
+								/// 	0x678 is the PAGE OFFSET(bottom 12 bits)
+								long longDSTAddress = (dstpageTable[dstPageNumber] * 4096) + dstPageOffset;
+								dstAddress = String.format("%08X", longDSTAddress);
+							
+								/// run this new Physical Address through Milestone 2 caching algorithm
+								/// MILESTONE 3 STUFF ENDS HERE!!
+
 									sumDstSrcBytes += 4;
 									totalAddressesRead++;
 									//dst cache check
@@ -428,6 +508,66 @@ public class driver {
 								srcAddress = sbSrc.toString();
 								if (!srcAddress.equals("00000000") || charArray[42] != '-')	//check if src is actually not reading bytes
 								{
+
+								///  MILESTONE 3 STUFF HERE
+								/// break address into two parts
+								/// 	PAGE NUMBER = top 20 bits
+								/// 	PAGE OFFSET = bottom 12 bits
+								int srcPageNumber = getPageNumBits(srcAddress);
+								int srcPageOffset = getPageOffsetBits(srcAddress);
+
+								/// check the current trace files Page Table: pageTabeList[pageNumber] == ?
+								int[] srcPageTable = pageTableList.get(i);
+								if (srcPageTable[srcPageNumber] != -1){		//page table hit
+									totalPageTableHits++;
+								} else if (srcPageTable[srcPageNumber] == -1){		//page table miss
+									if(freeUserPagesList.isEmpty()){
+										totalPageFaults++;
+										// pick from another random file first, will choose self if only trace file
+										int checker = 0;
+										for (int j = i; j <= traceFileList.size(); j++){
+											if (j == traceFileList.size()){
+												j = 0;
+											}
+
+											Tracefile tempTrace = traceFileList.get(j);
+											if (checker == traceFileList.size()){
+											srcPageTable[srcPageNumber] = FindFirstFreePage(pageTableList.get(i));
+												break;
+											}
+											if (j == i){
+												checker++;
+												continue;
+											}
+											if (tempTrace.isDoneReading){
+												checker++;
+												continue;
+											} 
+											
+											//pull from trace file j
+											srcPageTable[srcPageNumber] = FindFirstFreePage(pageTableList.get(j));
+											break;
+										}
+										
+									} else{
+										srcPageTable[srcPageNumber] = freeUserPagesList.getFirst();
+										freeUserPagesList.removeFirst();
+										totalPagesFromFree++;
+									}
+									
+								}
+
+								/// create physical address from User Page and Page Offset
+								/// ex] 0x12345678
+								/// 	0x12345 is the USER PAGE pulled from freeUserPagesList
+								/// 	0x678 is the PAGE OFFSET(bottom 12 bits)
+								long longSRCAddress = (srcPageTable[srcPageNumber] * 4096) + srcPageOffset;
+								srcAddress = String.format("%08X", longSRCAddress);
+							
+								/// run this new Physical Address through Milestone 2 caching algorithm
+								/// MILESTONE 3 STUFF ENDS HERE!!
+
+
 									sumDstSrcBytes += 4;
 									totalAddressesRead++;
 									//src cache check
@@ -537,13 +677,14 @@ public class driver {
 		System.out.println("Physical Pages Used By SYSTEM:  " + numOfPagesForSystem);
 		System.out.println("Pages Available to User:        " + pagesAvailableToUser);
 		System.out.println();
-		System.out.println("Virtual Pages Mapped:         " /* total mapped virtual pages */);
+		totalMappedVirtualPages = totalPageTableHits + totalPagesFromFree + totalPageFaults;
+		System.out.println("Virtual Pages Mapped:         " + totalMappedVirtualPages);
 		System.out.println("        ----------------------");
-		System.out.println("        Page Table Hits:      " /* total page table hits */);
+		System.out.println("        Page Table Hits:      " + totalPageTableHits);
 		System.out.println();
-		System.out.println("        Pages from Free:      " /* total pages assigned from free users pages */);
+		System.out.println("        Pages from Free:      " + totalPagesFromFree);
 		System.out.println();
-		System.out.println("        Total Page Faults     " /* total times page fault occurs */);
+		System.out.println("        Total Page Faults     " + totalPageFaults);
 		System.out.println();
 		System.out.println();
 		System.out.println("Page Table Usage Per Process:");
@@ -553,7 +694,7 @@ public class driver {
 
 
 		//write Milestone results to a text file
-		/*try (PrintStream out = new PrintStream(new FileOutputStream("Team_05_Sim_n_M#2.txt"))){
+		/*try (PrintStream out = new PrintStream(new FileOutputStream("Team_05_Sim_n_M#3.txt"))){
 			cacheSize /= 1024;
 			System.setOut(out);
 
@@ -578,6 +719,23 @@ public class driver {
 			System.out.println("CPI:                            " + String.format("%.2f",CPI) + " Cycles/Instruction (" + totalInstructions + ")");
 			System.out.printf("Unused Cache Space:             %.2f KB / %.2f KB = %.2f%%  Waste: $%.2f\n", unusedKB, impSizeKB, percentUnused, waste);
 			System.out.println("Unused Cache Blocks:            " + (totalBlocks - sumCompulsoryMisses) + " / " + totalBlocks);
+
+			System.out.println("\n***** *****  PHYSICAL MEMORY SIMULATION RESULTS:  ***** *****\n");
+			System.out.println("Physical Pages Used By SYSTEM:  " + numOfPagesForSystem);
+			System.out.println("Pages Available to User:        " + pagesAvailableToUser);
+			System.out.println();
+			System.out.println("Virtual Pages Mapped:         " + totalMappedVirtualPages);
+			System.out.println("        ----------------------");
+			System.out.println("        Page Table Hits:      " + totalPageTableHits);
+			System.out.println();
+			System.out.println("        Pages from Free:      " + totalPagesFromFree);
+			System.out.println();
+			System.out.println("        Total Page Faults     " + totalPageFaults);
+			System.out.println();
+			System.out.println();
+			System.out.println("Page Table Usage Per Process:");
+			System.out.println("------------------------------");
+			System.out.println();
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -835,6 +993,19 @@ public class driver {
         }
 		return cnt;
 	}
+
+	public static int FindFirstFreePage(int[] pt){
+		int n = 0;
+		for (int i = 0; i < pt.length; i++){
+			if (pt[i] != -1){
+				n = pt[i];
+				pt[i] = -1;
+				break;
+			}
+		}
+		return n;		
+	}
+
 
 //	public static void printPageTableUsage(ArrayList<File> fileList, ){
 //
