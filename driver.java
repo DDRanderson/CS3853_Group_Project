@@ -219,8 +219,8 @@ public class driver {
 						//once file is done reading, we must "free" all assigned User Page
 						int[] temp = pageTableList.get(i);
 						for (int t : temp ){
-							if (temp[t] != -1){
-								freeUserPagesList.add(temp[t]);
+							if (t != -1){
+								freeUserPagesList.add(t);
 							}
 						}
 						doneCount++;
@@ -254,6 +254,9 @@ public class driver {
 								int eipPageNumber = getPageNumBits(eipAddress);
 								int eipPageOffset = getPageOffsetBits(eipAddress);
 
+								if (eipPageNumber >= 1048575){
+									continue;
+								}
 								/// check the current trace files Page Table: pageTabeList[pageNumber] == ?
 								int[] eipPageTable = pageTableList.get(i);
 								if (eipPageTable[eipPageNumber] != -1){		//page table hit
@@ -379,6 +382,7 @@ public class driver {
 								if (!dstAddress.equals("00000000") || charArray[15] != '-')	//check if dst is actually not reading bytes
 								{
 
+								
 								///  MILESTONE 3 STUFF HERE
 								/// break address into two parts
 								/// 	PAGE NUMBER = top 20 bits
@@ -386,6 +390,9 @@ public class driver {
 								int dstPageNumber = getPageNumBits(dstAddress);
 								int dstPageOffset = getPageOffsetBits(dstAddress);
 
+								if (dstPageNumber >= 1048575){
+									continue;
+								}
 								/// check the current trace files Page Table: pageTabeList[pageNumber] == ?
 								int[] dstpageTable = pageTableList.get(i);
 								if (dstpageTable[dstPageNumber] != -1){		//page table hit
@@ -516,6 +523,9 @@ public class driver {
 								int srcPageNumber = getPageNumBits(srcAddress);
 								int srcPageOffset = getPageOffsetBits(srcAddress);
 
+								if (srcPageNumber >= 1048575){
+									continue;
+								}
 								/// check the current trace files Page Table: pageTabeList[pageNumber] == ?
 								int[] srcPageTable = pageTableList.get(i);
 								if (srcPageTable[srcPageNumber] != -1){		//page table hit
@@ -678,13 +688,13 @@ public class driver {
 		System.out.println("Pages Available to User:        " + pagesAvailableToUser);
 		System.out.println();
 		totalMappedVirtualPages = totalPageTableHits + totalPagesFromFree + totalPageFaults;
-		System.out.println("Virtual Pages Mapped:         " + totalMappedVirtualPages);
+		System.out.println("Virtual Pages Mapped:           " + totalMappedVirtualPages);
 		System.out.println("        ----------------------");
-		System.out.println("        Page Table Hits:      " + totalPageTableHits);
+		System.out.println("        Page Table Hits:        " + totalPageTableHits);
 		System.out.println();
-		System.out.println("        Pages from Free:      " + totalPagesFromFree);
+		System.out.println("        Pages from Free:        " + totalPagesFromFree);
 		System.out.println();
-		System.out.println("        Total Page Faults     " + totalPageFaults);
+		System.out.println("        Total Page Faults       " + totalPageFaults);
 		System.out.println();
 		System.out.println();
 		System.out.println("Page Table Usage Per Process:");
@@ -724,13 +734,13 @@ public class driver {
 			System.out.println("Physical Pages Used By SYSTEM:  " + numOfPagesForSystem);
 			System.out.println("Pages Available to User:        " + pagesAvailableToUser);
 			System.out.println();
-			System.out.println("Virtual Pages Mapped:         " + totalMappedVirtualPages);
+			System.out.println("Virtual Pages Mapped:           " + totalMappedVirtualPages);
 			System.out.println("        ----------------------");
-			System.out.println("        Page Table Hits:      " + totalPageTableHits);
+			System.out.println("        Page Table Hits:        " + totalPageTableHits);
 			System.out.println();
-			System.out.println("        Pages from Free:      " + totalPagesFromFree);
+			System.out.println("        Pages from Free:        " + totalPagesFromFree);
 			System.out.println();
-			System.out.println("        Total Page Faults     " + totalPageFaults);
+			System.out.println("        Total Page Faults       " + totalPageFaults);
 			System.out.println();
 			System.out.println();
 			System.out.println("Page Table Usage Per Process:");
