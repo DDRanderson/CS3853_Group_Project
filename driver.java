@@ -697,10 +697,9 @@ public class driver {
 		System.out.println("        Total Page Faults       " + totalPageFaults);
 		System.out.println();
 		System.out.println();
-		System.out.println("Page Table Usage Per Process:");
-		System.out.println("------------------------------");
-		System.out.println();
-		/* TODO: for loop that prints data from each trace file, include index number and tracefile name*/
+
+		long PTOverhead = (524288L * 4 * fileList.size()) / 8;
+		printPageTableUsage(fileList, pageTableList, PTOverhead);
 
 
 		//write Milestone results to a text file
@@ -747,13 +746,12 @@ public class driver {
 			System.out.println("------------------------------");
 			System.out.println();
 
+			long PTOverhead = (524288L * 4 * fileList.size()) / 8;
+			printPageTableUsage(fileList, pageTableList, PTOverhead);
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}*/
-
-		//////////////////////////////////
-		//       END MILESTONE #2		//
-		//////////////////////////////////
 
 	}
 	
@@ -995,11 +993,11 @@ public class driver {
         }
 	}
 
-	public int countUsedPTEntries(int[] pageTable){
+	public static int countUsedPTEntries(int[] pageTable){
 		int cnt = 0;
 
         for (int entry : pageTable) {
-            if (entry == -1) cnt++;
+            if (entry != -1) cnt++;
         }
 		return cnt;
 	}
@@ -1017,7 +1015,30 @@ public class driver {
 	}
 
 
-//	public static void printPageTableUsage(ArrayList<File> fileList, ){
-//
-//	}
+	//TODO: need to use this calculation when passing in for "overheadPT" arg:
+// long totalRAMForPageTables = (numEntries * sizeOfPageTableEntry * numTraceFiles) / 8;
+	public static void printPageTableUsage(ArrayList<File> fileList, ArrayList<int[]> pageTableList, long overheadPT){
+		System.out.println("Page Table Usage Per Process:");
+		System.out.println("------------------------------\n");
+
+		for(int i = 0; i < fileList.size(); i++){
+			File currFile = fileList.get(i);
+			int usedPTEntries = countUsedPTEntries(pageTableList.get(i));
+			double usedPTPercent = (double) (usedPTEntries * 100) / 524288;
+			long pageTableWasted = calculateWastedSpace(524288, usedPTEntries, 4, overheadPT);
+
+			System.out.printf("[%d] %s:\n", i, currFile.getName());
+			System.out.printf("\tUsed Page Table Entries: %d (%.4f%%)\n", usedPTEntries, usedPTPercent);
+			System.out.println("\tPage Table Wasted: " + pageTableWasted + " bytes\n");
+		}
+	}
+
+	public static long calculateWastedSpace(int totalEntries, int usedEntries, int entrySize, long overhead){
+		long totalEntriesSpace = (long) totalEntries * entrySize;
+		long usedEntriesSpace = (long) usedEntries * entrySize;
+		long totalSpace = totalEntriesSpace + overhead;
+
+		return totalSpace - usedEntriesSpace;
+	}
+
 }	
